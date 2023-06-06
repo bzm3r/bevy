@@ -13,9 +13,18 @@ license = "MIT OR Apache-2.0"
 keywords = ["bevy"]
 
 [features]
+default = ["core2d", "core3d", "msaa_writeback", "tonemapping", "upscaling", "bloom", "fxaa", "casp"]
 trace = []
 webgl = []
 tonemapping_luts = []
+core2d = []
+core3d = []
+msaa_writeback = []
+tonemapping = []
+upscaling = []
+bloom = []
+fxaa = []
+casp = []
 
 [dependencies]
 # bevy

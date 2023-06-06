@@ -1,7 +1,6 @@
-use crate::{
-    clear_color::ClearColorConfig,
-    tonemapping::{DebandDither, Tonemapping},
-};
+use crate::clear_color::ClearColorConfig;
+#[cfg(feature = "tonemapping")]
+use crate::tonemapping::{DebandDither, Tonemapping};
 use bevy_ecs::prelude::*;
 use bevy_reflect::Reflect;
 use bevy_render::{
@@ -29,7 +28,9 @@ pub struct Camera2dBundle {
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub camera_2d: Camera2d,
+    #[cfg(feature = "tonemapping")]
     pub tonemapping: Tonemapping,
+    #[cfg(feature = "tonemapping")]
     pub deband_dither: DebandDither,
 }
 
@@ -71,7 +72,9 @@ impl Camera2dBundle {
             global_transform: Default::default(),
             camera: Camera::default(),
             camera_2d: Camera2d::default(),
+            #[cfg(feature = "tonemapping")]
             tonemapping: Tonemapping::None,
+            #[cfg(feature = "tonemapping")]
             deband_dither: DebandDither::Disabled,
         }
     }

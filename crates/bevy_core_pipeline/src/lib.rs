@@ -1,24 +1,39 @@
 #![allow(clippy::type_complexity)]
 
 pub mod blit;
-pub mod bloom;
 pub mod clear_color;
-pub mod contrast_adaptive_sharpening;
-pub mod core_2d;
-pub mod core_3d;
 pub mod fullscreen_vertex_shader;
-pub mod fxaa;
-pub mod msaa_writeback;
 pub mod prepass;
 mod skybox;
-mod taa;
-pub mod tonemapping;
-pub mod upscaling;
-
 pub use skybox::Skybox;
+pub mod camera2d;
+pub mod camera3d;
+
+#[cfg(feature = "bloom")]
+pub mod bloom;
+
+#[cfg(feature = "casp")]
+pub mod contrast_adaptive_sharpening;
+#[cfg(feature = "core2d")]
+pub mod core_2d;
+
+#[cfg(feature = "core3d")]
+pub mod core_3d;
+#[cfg(feature = "core3d")]
+mod taa;
+
+#[cfg(feature = "fxaa")]
+pub mod fxaa;
+#[cfg(feature = "msaa_writeback")]
+pub mod msaa_writeback;
+#[cfg(feature = "tonemapping")]
+pub mod tonemapping;
+#[cfg(feature = "tonemapping")]
+pub mod upscaling;
 
 /// Experimental features that are not yet finished. Please report any issues you encounter!
 pub mod experimental {
+    #[cfg(feature = "core3d")]
     pub mod taa {
         pub use crate::taa::*;
     }
@@ -27,9 +42,9 @@ pub mod experimental {
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
+        camera2d::{Camera2d, Camera2dBundle},
+        camera3d::{Camera3d, Camera3dBundle},
         clear_color::ClearColor,
-        core_2d::{Camera2d, Camera2dBundle},
-        core_3d::{Camera3d, Camera3dBundle},
     };
 }
 
@@ -69,14 +84,22 @@ impl Plugin for CorePipelinePlugin {
             .register_type::<NormalPrepass>()
             .init_resource::<ClearColor>()
             .add_plugin(ExtractResourcePlugin::<ClearColor>::default())
-            .add_plugin(Core2dPlugin)
-            .add_plugin(Core3dPlugin)
-            .add_plugin(BlitPlugin)
-            .add_plugin(MsaaWritebackPlugin)
-            .add_plugin(TonemappingPlugin)
-            .add_plugin(UpscalingPlugin)
-            .add_plugin(BloomPlugin)
-            .add_plugin(FxaaPlugin)
-            .add_plugin(CASPlugin);
+            .add_plugin(BlitPlugin);
+        #[cfg(feature = "core2d")]
+        app.add_plugin(Core2dPlugin);
+        #[cfg(feature = "core3d")]
+        app.add_plugin(Core3dPlugin);
+        #[cfg(feature = "msaa_writeback")]
+        app.add_plugin(MsaaWritebackPlugin);
+        #[cfg(feature = "tonemapping")]
+        app.add_plugin(TonemappingPlugin);
+        #[cfg(feature = "upscaling")]
+        app.add_plugin(UpscalingPlugin);
+        #[cfg(feature = "bloom")]
+        app.add_plugin(BloomPlugin);
+        #[cfg(feature = "fxaa")]
+        app.add_plugin(FxaaPlugin);
+        #[cfg(feature = "casp")]
+        app.add_plugin(CASPlugin);
     }
 }

@@ -4,10 +4,12 @@ mod upsampling_pipeline;
 
 pub use settings::{BloomCompositeMode, BloomPrefilterSettings, BloomSettings};
 
-use crate::{
-    core_2d::{self, CORE_2D},
-    core_3d::{self, CORE_3D},
-};
+#[cfg(feature = "core2d")]
+use crate::core_2d::{self, CORE_2D};
+
+#[cfg(feature = "core3d")]
+use crate::core_3d::{self, CORE_3D};
+
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, HandleUntyped};
 use bevy_ecs::{prelude::*, query::QueryItem};
@@ -71,8 +73,11 @@ impl Plugin for BloomPlugin {
                     prepare_upsampling_pipeline.in_set(RenderSet::Prepare),
                     queue_bloom_bind_groups.in_set(RenderSet::Queue),
                 ),
-            )
-            // Add bloom to the 3d render graph
+            );
+
+        // Add bloom to the 3d render graph
+        #[cfg(feature = "core3d")]
+        render_app
             .add_render_graph_node::<ViewNodeRunner<BloomNode>>(
                 CORE_3D,
                 core_3d::graph::node::BLOOM,
@@ -82,10 +87,13 @@ impl Plugin for BloomPlugin {
                 &[
                     core_3d::graph::node::END_MAIN_PASS,
                     core_3d::graph::node::BLOOM,
+                    #[cfg(feature = "tonemapping")]
                     core_3d::graph::node::TONEMAPPING,
                 ],
-            )
-            // Add bloom to the 2d render graph
+            );
+
+        // Add bloom to the 2d render graph
+        render_app
             .add_render_graph_node::<ViewNodeRunner<BloomNode>>(
                 CORE_2D,
                 core_2d::graph::node::BLOOM,
@@ -95,6 +103,7 @@ impl Plugin for BloomPlugin {
                 &[
                     core_2d::graph::node::MAIN_PASS,
                     core_2d::graph::node::BLOOM,
+                    #[cfg(feature = "tonemapping")]
                     core_2d::graph::node::TONEMAPPING,
                 ],
             );

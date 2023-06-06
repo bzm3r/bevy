@@ -1,8 +1,8 @@
-use crate::{
-    core_2d::{self, CORE_2D},
-    core_3d::{self, CORE_3D},
-    fullscreen_vertex_shader::fullscreen_shader_vertex_state,
-};
+#[cfg(feature = "core2d")]
+use crate::core_2d::{self, CORE_2D};
+#[cfg(feature = "core3d")]
+use crate::core_3d::{self, CORE_3D};
+use crate::fullscreen_vertex_shader::fullscreen_shader_vertex_state;
 use bevy_app::prelude::*;
 use bevy_asset::{load_internal_asset, HandleUntyped};
 use bevy_ecs::{prelude::*, query::QueryItem};
@@ -119,28 +119,42 @@ impl Plugin for CASPlugin {
             .init_resource::<SpecializedRenderPipelines<CASPipeline>>()
             .add_systems(Render, prepare_cas_pipelines.in_set(RenderSet::Prepare));
 
+        #[cfg(feature = "core3d")]
         {
             use core_3d::graph::node::*;
             render_app
                 .add_render_graph_node::<CASNode>(CORE_3D, CONTRAST_ADAPTIVE_SHARPENING)
-                .add_render_graph_edge(CORE_3D, TONEMAPPING, CONTRAST_ADAPTIVE_SHARPENING)
+                .add_render_graph_edge(
+                    CORE_3D,
+                    #[cfg(feature = "tonemapping")]
+                    TONEMAPPING,
+                    CONTRAST_ADAPTIVE_SHARPENING,
+                )
                 .add_render_graph_edges(
                     CORE_3D,
                     &[
+                        #[cfg(feature = "fxaa")]
                         FXAA,
                         CONTRAST_ADAPTIVE_SHARPENING,
                         END_MAIN_PASS_POST_PROCESSING,
                     ],
                 );
         }
+        #[cfg(feature = "core2d")]
         {
             use core_2d::graph::node::*;
             render_app
                 .add_render_graph_node::<CASNode>(CORE_2D, CONTRAST_ADAPTIVE_SHARPENING)
-                .add_render_graph_edge(CORE_2D, TONEMAPPING, CONTRAST_ADAPTIVE_SHARPENING)
+                .add_render_graph_edge(
+                    CORE_2D,
+                    #[cfg(feature = "tonemapping")]
+                    TONEMAPPING,
+                    CONTRAST_ADAPTIVE_SHARPENING,
+                )
                 .add_render_graph_edges(
                     CORE_2D,
                     &[
+                        #[cfg(feature = "fxaa")]
                         FXAA,
                         CONTRAST_ADAPTIVE_SHARPENING,
                         END_MAIN_PASS_POST_PROCESSING,
