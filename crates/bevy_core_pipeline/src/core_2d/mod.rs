@@ -7,13 +7,9 @@ pub mod graph {
         pub const VIEW_ENTITY: &str = "view_entity";
     }
     pub mod node {
-        pub const MSAA_WRITEBACK: &str = "msaa_writeback";
         pub const MAIN_PASS: &str = "main_pass";
-        pub const BLOOM: &str = "bloom";
         pub const TONEMAPPING: &str = "tonemapping";
-        pub const FXAA: &str = "fxaa";
         pub const UPSCALING: &str = "upscaling";
-        pub const CONTRAST_ADAPTIVE_SHARPENING: &str = "contrast_adaptive_sharpening";
         pub const END_MAIN_PASS_POST_PROCESSING: &str = "end_main_pass_post_processing";
     }
 }
@@ -40,7 +36,13 @@ use std::ops::Range;
 
 use crate::{tonemapping::TonemappingNode, upscaling::UpscalingNode};
 
-pub struct Core2dPlugin;
+#[derive(Default, Clone, Copy)]
+pub struct Core2dPlugin {
+    /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
+    tonemapping: bool,
+    /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
+    upscaling: bool,
+}
 
 impl Plugin for Core2dPlugin {
     fn build(&self, app: &mut App) {
@@ -69,18 +71,44 @@ impl Plugin for Core2dPlugin {
         render_app
             .add_render_sub_graph(CORE_2D)
             .add_render_graph_node::<MainPass2dNode>(CORE_2D, MAIN_PASS)
-            .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_2D, TONEMAPPING)
-            .add_render_graph_node::<EmptyNode>(CORE_2D, END_MAIN_PASS_POST_PROCESSING)
-            .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_2D, UPSCALING)
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    MAIN_PASS,
-                    TONEMAPPING,
-                    END_MAIN_PASS_POST_PROCESSING,
-                    UPSCALING,
-                ],
-            );
+            .add_render_graph_node::<EmptyNode>(CORE_2D, END_MAIN_PASS_POST_PROCESSING);
+
+        if self.tonemapping {
+            render_app
+                .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_2D, TONEMAPPING);
+        }
+
+        if self.upscaling {
+            render_app.add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_2D, UPSCALING);
+        }
+
+        render_app.add_render_graph_edges(CORE_2D, &self.generate_edges());
+    }
+}
+
+impl Core2dPlugin {
+    /// Generate required edges based on user provided settings
+    ///
+    /// The default edges are (in order): `[MAIN_PASS, TONEMAPPING, END_MAIN_PASS_POST_PROCESSING, UPSCALING]`
+    /// Out of these, `TONEMAPPING` and `UPSCALING` are optional.
+    fn generate_edges(&self) -> Vec<&'static str> {
+        use graph::node::*;
+
+        let default_edges = [
+            MAIN_PASS,
+            TONEMAPPING,
+            END_MAIN_PASS_POST_PROCESSING,
+            UPSCALING,
+        ];
+
+        default_edges
+            .into_iter()
+            .filter(|&edge| match edge {
+                TONEMAPPING => self.tonemapping,
+                UPSCALING => self.upscaling,
+                _ => true,
+            })
+            .collect()
     }
 }
 

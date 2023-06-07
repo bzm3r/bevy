@@ -78,7 +78,7 @@ impl Plugin for CorePipelinePlugin {
             .register_type::<NormalPrepass>()
             .init_resource::<ClearColor>()
             .add_plugin(ExtractResourcePlugin::<ClearColor>::default())
-            .add_plugin(Core2dPlugin)
+            .add_plugin(self.core2d)
             .add_plugin(Core3dPlugin)
             .add_plugin(BlitPlugin)
             .add_plugin(MsaaWritebackPlugin)
