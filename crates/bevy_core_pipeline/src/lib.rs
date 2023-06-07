@@ -79,7 +79,7 @@ impl Plugin for CorePipelinePlugin {
             .init_resource::<ClearColor>()
             .add_plugin(ExtractResourcePlugin::<ClearColor>::default())
             .add_plugin(self.core2d)
-            .add_plugin(Core3dPlugin)
+            .add_plugin(self.core3d)
             .add_plugin(BlitPlugin)
             .add_plugin(MsaaWritebackPlugin)
             .add_plugin(TonemappingPlugin)

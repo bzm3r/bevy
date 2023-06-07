@@ -59,14 +59,25 @@ use crate::{
     upscaling::UpscalingNode,
 };
 
-pub struct Core3dPlugin;
+#[derive(Default, Clone, Copy)]
+pub struct Core3dPlugin {
+    /// Specifies whether [`SkyboxPlugin`](SkyboxPlugin) should be enabled
+    skybox: bool,
+    /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
+    tonemapping: bool,
+    /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
+    upscaling: bool,
+}
 
 impl Plugin for Core3dPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Camera3d>()
             .register_type::<Camera3dDepthLoadOp>()
-            .add_plugin(SkyboxPlugin)
             .add_plugin(ExtractComponentPlugin::<Camera3d>::default());
+
+        if self.skybox {
+            app.add_plugin(SkyboxPlugin);
+        }
 
         let render_app = match app.get_sub_app_mut(RenderApp) {
             Ok(render_app) => render_app,
@@ -104,22 +115,50 @@ impl Plugin for Core3dPlugin {
                 MAIN_TRANSPARENT_PASS,
             )
             .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS)
-            .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_3D, TONEMAPPING)
-            .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS_POST_PROCESSING)
-            .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_3D, UPSCALING)
-            .add_render_graph_edges(
-                CORE_3D,
-                &[
-                    PREPASS,
-                    START_MAIN_PASS,
-                    MAIN_OPAQUE_PASS,
-                    MAIN_TRANSPARENT_PASS,
-                    END_MAIN_PASS,
-                    TONEMAPPING,
-                    END_MAIN_PASS_POST_PROCESSING,
-                    UPSCALING,
-                ],
-            );
+            .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS_POST_PROCESSING);
+
+        if self.tonemapping {
+            render_app
+                .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_3D, TONEMAPPING);
+        }
+
+        if self.upscaling {
+            render_app.add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_3D, UPSCALING);
+        }
+
+        render_app.add_render_graph_edges(CORE_3D, &self.generate_edges());
+    }
+}
+
+impl Core3dPlugin {
+    /// Generate required edges based on user provided settings
+    ///
+    /// The default edges are (in order): `[PREPASS, START_MAIN_PASS, MAIN_OPAQUE_PASS, 
+    /// MAIN_TRANSPARENT_PASS, END_MAIN_PASS, TONEMAPPING, END_MAIN_PASS_POST_PROCESSING, UPSCALING]`.
+    /// 
+    /// Out of these, `TONEMAPPING` and `UPSCALING` are optional.
+    fn generate_edges(&self) -> Vec<&'static str> {
+        use graph::node::*;
+
+        let default_edges = [
+            PREPASS,
+            START_MAIN_PASS,
+            MAIN_OPAQUE_PASS,
+            MAIN_TRANSPARENT_PASS,
+            END_MAIN_PASS,
+            TONEMAPPING,
+            END_MAIN_PASS_POST_PROCESSING,
+            UPSCALING,
+        ];
+
+        default_edges
+            .into_iter()
+            .filter(|&edge| match edge {
+                TONEMAPPING => self.tonemapping,
+                UPSCALING => self.upscaling,
+                _ => true,
+            })
+            .collect()
     }
 }
 
