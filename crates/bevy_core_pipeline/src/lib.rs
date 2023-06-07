@@ -52,7 +52,16 @@ use bevy_asset::load_internal_asset;
 use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 
 #[derive(Default)]
-pub struct CorePipelinePlugin;
+pub struct CorePipelinePlugin {
+    pub core2d: Core2dPlugin,
+    pub core3d: Core3dPlugin,
+    pub msaa_writeback: MsaaWritebackPlugin,
+    pub tonemapping: TonemappingPlugin,
+    pub upscaling: UpscalingPlugin,
+    pub bloom: BloomPlugin,
+    pub fxaa: FxaaPlugin,
+    pub contrast_adaptive_sharpening: CASPlugin,
+}
 
 impl Plugin for CorePipelinePlugin {
     fn build(&self, app: &mut App) {
