@@ -1,4 +1,3 @@
-mod camera_3d;
 mod main_opaque_pass_3d_node;
 mod main_transparent_pass_3d_node;
 
@@ -8,16 +7,22 @@ pub mod graph {
         pub const VIEW_ENTITY: &str = "view_entity";
     }
     pub mod node {
+        #[cfg(feature = "msaa_writeback")]
         pub const MSAA_WRITEBACK: &str = "msaa_writeback";
         pub const PREPASS: &str = "prepass";
         pub const START_MAIN_PASS: &str = "start_main_pass";
         pub const MAIN_OPAQUE_PASS: &str = "main_opaque_pass";
         pub const MAIN_TRANSPARENT_PASS: &str = "main_transparent_pass";
         pub const END_MAIN_PASS: &str = "end_main_pass";
+        #[cfg(feature = "bloom")]
         pub const BLOOM: &str = "bloom";
+        #[cfg(feature = "tonemapping")]
         pub const TONEMAPPING: &str = "tonemapping";
+        #[cfg(feature = "fxaa")]
         pub const FXAA: &str = "fxaa";
+        #[cfg(feature = "upscaling")]
         pub const UPSCALING: &str = "upscaling";
+        #[cfg(feature = "casp")]
         pub const CONTRAST_ADAPTIVE_SHARPENING: &str = "contrast_adaptive_sharpening";
         pub const END_MAIN_PASS_POST_PROCESSING: &str = "end_main_pass_post_processing";
     }
@@ -26,7 +31,6 @@ pub const CORE_3D: &str = graph::NAME;
 
 use std::cmp::Reverse;
 
-pub use camera_3d::*;
 pub use main_opaque_pass_3d_node::*;
 pub use main_transparent_pass_3d_node::*;
 
@@ -55,9 +59,14 @@ use bevy_utils::{FloatOrd, HashMap};
 use crate::{
     prepass::{node::PrepassNode, DepthPrepass},
     skybox::SkyboxPlugin,
-    tonemapping::TonemappingNode,
-    upscaling::UpscalingNode,
+    camera3d::*,
 };
+
+#[cfg(feature = "tonemapping")]
+use crate::tonemapping::TonemappingNode;
+
+#[cfg(feature = "upscaling")]
+use crate::upscaling::UpscalingNode;
 
 pub struct Core3dPlugin;
 
@@ -104,22 +113,26 @@ impl Plugin for Core3dPlugin {
                 MAIN_TRANSPARENT_PASS,
             )
             .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS)
-            .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_3D, TONEMAPPING)
-            .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS_POST_PROCESSING)
-            .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_3D, UPSCALING)
-            .add_render_graph_edges(
-                CORE_3D,
-                &[
-                    PREPASS,
-                    START_MAIN_PASS,
-                    MAIN_OPAQUE_PASS,
-                    MAIN_TRANSPARENT_PASS,
-                    END_MAIN_PASS,
-                    TONEMAPPING,
-                    END_MAIN_PASS_POST_PROCESSING,
-                    UPSCALING,
-                ],
-            );
+            .add_render_graph_node::<EmptyNode>(CORE_3D, END_MAIN_PASS_POST_PROCESSING);
+        #[cfg(feature = "tonemapping")]
+        render_app.add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_3D, TONEMAPPING);
+        #[cfg(feature = "upscaling")]
+        render_app.add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_3D, UPSCALING);
+        render_app.add_render_graph_edges(
+            CORE_3D,
+            &[
+                PREPASS,
+                START_MAIN_PASS,
+                MAIN_OPAQUE_PASS,
+                MAIN_TRANSPARENT_PASS,
+                END_MAIN_PASS,
+                #[cfg(feature = "tonemapping")]
+                TONEMAPPING,
+                END_MAIN_PASS_POST_PROCESSING,
+                #[cfg(feature = "upscaling")]
+                UPSCALING,
+            ],
+        );
     }
 }
 

@@ -1,9 +1,9 @@
-use crate::{
-    core_3d::{self, CORE_3D},
-    fullscreen_vertex_shader::fullscreen_shader_vertex_state,
-    prelude::Camera3d,
-    prepass::{DepthPrepass, MotionVectorPrepass, ViewPrepassTextures},
-};
+use crate::camera3d::Camera3d;
+#[cfg(feature = "core3d")]
+use crate::core_3d::{self, CORE_3D};
+use crate::fullscreen_vertex_shader::fullscreen_shader_vertex_state;
+use crate::prepass::{DepthPrepass, MotionVectorPrepass, ViewPrepassTextures};
+
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, HandleUntyped};
 use bevy_core::FrameCount;
@@ -71,14 +71,19 @@ impl Plugin for TemporalAntiAliasPlugin {
                     prepare_taa_history_textures.in_set(RenderSet::Prepare),
                     prepare_taa_pipelines.in_set(RenderSet::Prepare),
                 ),
-            )
+            );
+
+        #[cfg(feature = "core3d")]
+        render_app
             .add_render_graph_node::<ViewNodeRunner<TAANode>>(CORE_3D, draw_3d_graph::node::TAA)
             .add_render_graph_edges(
                 CORE_3D,
                 &[
                     core_3d::graph::node::END_MAIN_PASS,
                     draw_3d_graph::node::TAA,
+                    #[cfg(feature = "bloom")]
                     core_3d::graph::node::BLOOM,
+                    #[cfg(feature = "tonemapping")]
                     core_3d::graph::node::TONEMAPPING,
                 ],
             );

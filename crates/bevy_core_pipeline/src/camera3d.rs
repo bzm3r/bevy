@@ -1,7 +1,6 @@
-use crate::{
-    clear_color::ClearColorConfig,
-    tonemapping::{DebandDither, Tonemapping},
-};
+use crate::clear_color::ClearColorConfig;
+#[cfg(feature = "tonemapping")]
+use crate::tonemapping::{DebandDither, Tonemapping};
 use bevy_ecs::prelude::*;
 use bevy_reflect::{Reflect, ReflectDeserialize, ReflectSerialize};
 use bevy_render::{
@@ -87,7 +86,9 @@ pub struct Camera3dBundle {
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub camera_3d: Camera3d,
+    #[cfg(feature = "tonemapping")]
     pub tonemapping: Tonemapping,
+    #[cfg(feature = "tonemapping")]
     pub dither: DebandDither,
     pub color_grading: ColorGrading,
 }
@@ -104,7 +105,9 @@ impl Default for Camera3dBundle {
             transform: Default::default(),
             global_transform: Default::default(),
             camera_3d: Default::default(),
-            tonemapping: Tonemapping::ReinhardLuminance,
+            #[cfg(feature = "tonemapping")]
+            tonemapping: Default::default(),
+            #[cfg(feature = "tonemapping")]
             dither: DebandDither::Enabled,
             color_grading: ColorGrading::default(),
         }

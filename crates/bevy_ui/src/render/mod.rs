@@ -1,7 +1,7 @@
 mod pipeline;
 mod render_pass;
 
-use bevy_core_pipeline::{core_2d::Camera2d, core_3d::Camera3d};
+use bevy_core_pipeline::{camera2d::Camera2d, camera3d::Camera3d};
 use bevy_render::{ExtractSchedule, Render};
 #[cfg(feature = "bevy_text")]
 use bevy_window::{PrimaryWindow, Window};
