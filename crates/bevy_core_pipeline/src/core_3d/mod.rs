@@ -62,11 +62,11 @@ use crate::{
 #[derive(Default, Clone, Copy)]
 pub struct Core3dPlugin {
     /// Specifies whether [`SkyboxPlugin`](SkyboxPlugin) should be enabled
-    skybox: bool,
+    pub skybox: bool,
     /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
-    tonemapping: bool,
+    pub tonemapping: bool,
     /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
-    upscaling: bool,
+    pub upscaling: bool,
 }
 
 impl Plugin for Core3dPlugin {

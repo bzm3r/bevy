@@ -39,9 +39,9 @@ use crate::{tonemapping::TonemappingNode, upscaling::UpscalingNode};
 #[derive(Default, Clone, Copy)]
 pub struct Core2dPlugin {
     /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
-    tonemapping: bool,
+    pub tonemapping: bool,
     /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
-    upscaling: bool,
+    pub upscaling: bool,
 }
 
 impl Plugin for Core2dPlugin {

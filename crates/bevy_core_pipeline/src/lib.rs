@@ -82,10 +82,16 @@ impl Plugin for CorePipelinePlugin {
             .add_plugin(self.core3d)
             .add_plugin(BlitPlugin)
             .add_plugin(MsaaWritebackPlugin)
-            .add_plugin(TonemappingPlugin)
-            .add_plugin(UpscalingPlugin)
             .add_plugin(BloomPlugin)
             .add_plugin(FxaaPlugin)
             .add_plugin(CASPlugin);
+
+        if self.core2d.tonemapping || self.core3d.tonemapping  {
+            app.add_plugin(TonemappingPlugin);
+        }
+
+        if self.core2d.upscaling || self.core3d.upscaling  {
+            app.add_plugin(UpscalingPlugin);
+        }
     }
 }
