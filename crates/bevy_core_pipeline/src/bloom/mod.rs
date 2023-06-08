@@ -5,8 +5,8 @@ mod upsampling_pipeline;
 pub use settings::{BloomCompositeMode, BloomPrefilterSettings, BloomSettings};
 
 use crate::{
-    core_2d::{self, CORE_2D},
-    core_3d::{self, CORE_3D},
+    core_2d::{self, Core2dPlugin, CORE_2D},
+    core_3d::{self, Core3dPlugin, CORE_3D},
 };
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, HandleUntyped};
@@ -43,7 +43,16 @@ const BLOOM_TEXTURE_FORMAT: TextureFormat = TextureFormat::Rg11b10Float;
 // 512 behaves well with the UV offset of 0.004 used in bloom.wgsl
 const MAX_MIP_DIMENSION: u32 = 512;
 
-pub struct BloomPlugin;
+/// Options here default to `false`.
+/// 
+/// Should be constructed using the [`inherit_from`](BloomPlugin::inherit_from) method.
+#[derive(Default, Clone, Copy)]
+pub struct BloomPlugin {
+    /// Specifies whether tonemapping was enabled for the core2d pipeline. 
+    tonemapping2d: bool,
+    /// Specifies whether tonemapping was enabled for the core3d pipeline,
+    tonemapping3d: bool,
+}
 
 impl Plugin for BloomPlugin {
     fn build(&self, app: &mut App) {
@@ -77,27 +86,13 @@ impl Plugin for BloomPlugin {
                 CORE_3D,
                 core_3d::graph::node::BLOOM,
             )
-            .add_render_graph_edges(
-                CORE_3D,
-                &[
-                    core_3d::graph::node::END_MAIN_PASS,
-                    core_3d::graph::node::BLOOM,
-                    core_3d::graph::node::TONEMAPPING,
-                ],
-            )
+            .add_render_graph_edges(CORE_3D, &self.generate_3d_edges())
             // Add bloom to the 2d render graph
             .add_render_graph_node::<ViewNodeRunner<BloomNode>>(
                 CORE_2D,
                 core_2d::graph::node::BLOOM,
             )
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    core_2d::graph::node::MAIN_PASS,
-                    core_2d::graph::node::BLOOM,
-                    core_2d::graph::node::TONEMAPPING,
-                ],
-            );
+            .add_render_graph_edges(CORE_2D, &self.generate_2d_edges());
     }
 
     fn finish(&self, app: &mut App) {
@@ -109,6 +104,59 @@ impl Plugin for BloomPlugin {
         render_app
             .init_resource::<BloomDownsamplingPipeline>()
             .init_resource::<BloomUpsamplingPipeline>();
+    }
+}
+
+impl BloomPlugin {
+    /// Create new by inheriting relevant options (currently: whether tonemapping is on) from the
+    /// core 2d and 3d plugins.
+    pub fn inherit_from(core2d: Core2dPlugin, core3d: Core3dPlugin) -> Self {
+        Self {
+            tonemapping2d: core2d.tonemapping,
+            tonemapping3d: core3d.tonemapping,
+        }
+    }
+
+    /// Generate required edges specifying where the plugin is inserted in the core 2d pipeline
+    /// based on user provided settings.
+    ///
+    /// If tonemapping is enabled for the core 2d pipeline, the edges will be:
+    ///     `[MAIN_PASS, BLOOM, TONEMAPPING]`
+    /// Otherwise, the edges will be:
+    ///     `[MAIN_PASS, BLOOM, END_MAIN_PASS_POST_PROCESSING]`
+    fn generate_2d_edges(&self) -> [&'static str; 3] {
+        let following_node = if self.tonemapping2d {
+            core_2d::graph::node::TONEMAPPING
+        } else {
+            core_2d::graph::node::END_MAIN_PASS_POST_PROCESSING
+        };
+
+        [
+            core_2d::graph::node::MAIN_PASS,
+            core_2d::graph::node::BLOOM,
+            following_node,
+        ]
+    }
+
+    /// Generate required edges specifying where the plugin is inserted in the core 3d pipeline
+    /// based on user provided settings.
+    ///
+    /// If tonemapping is enabled for the core 3d pipeline, the edges will be:
+    ///     `[END_MAIN_PASS, BLOOM, TONEMAPPING]`
+    /// Otherwise, the edges will be:
+    ///     `[END_MAIN_PASS, BLOOM, END_MAIN_PASS_POST_PROCESSING]`
+    fn generate_3d_edges(&self) -> [&'static str; 3] {
+        let following_node = if self.tonemapping2d {
+            core_2d::graph::node::TONEMAPPING
+        } else {
+            core_2d::graph::node::END_MAIN_PASS_POST_PROCESSING
+        };
+
+        [
+            core_3d::graph::node::END_MAIN_PASS,
+            core_3d::graph::node::BLOOM,
+            following_node,
+        ]
     }
 }
 

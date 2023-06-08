@@ -52,7 +52,10 @@ use bevy_asset::load_internal_asset;
 use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 
 #[derive(Default)]
-pub struct CorePipelinePlugin;
+pub struct CorePipelinePlugin {
+    pub core2d: Core2dPlugin,
+    pub core3d: Core3dPlugin,
+}
 
 impl Plugin for CorePipelinePlugin {
     fn build(&self, app: &mut App) {
@@ -69,14 +72,20 @@ impl Plugin for CorePipelinePlugin {
             .register_type::<NormalPrepass>()
             .init_resource::<ClearColor>()
             .add_plugin(ExtractResourcePlugin::<ClearColor>::default())
-            .add_plugin(Core2dPlugin)
-            .add_plugin(Core3dPlugin)
+            .add_plugin(self.core2d)
+            .add_plugin(self.core3d)
             .add_plugin(BlitPlugin)
             .add_plugin(MsaaWritebackPlugin)
-            .add_plugin(TonemappingPlugin)
-            .add_plugin(UpscalingPlugin)
-            .add_plugin(BloomPlugin)
-            .add_plugin(FxaaPlugin)
+            .add_plugin(BloomPlugin::inherit_from(self.core2d, self.core3d))
+            .add_plugin(FxaaPlugin::inherit_from(self.core2d, self.core3d))
             .add_plugin(CASPlugin);
+
+        if self.core2d.tonemapping || self.core3d.tonemapping  {
+            app.add_plugin(TonemappingPlugin);
+        }
+
+        if self.core2d.upscaling || self.core3d.upscaling  {
+            app.add_plugin(UpscalingPlugin);
+        }
     }
 }

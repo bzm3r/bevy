@@ -1,6 +1,6 @@
 use crate::{
-    core_2d::{self, CORE_2D},
-    core_3d::{self, CORE_3D},
+    core_2d::{self, Core2dPlugin, CORE_2D},
+    core_3d::{self, Core3dPlugin, CORE_3D},
     fullscreen_vertex_shader::fullscreen_shader_vertex_state,
 };
 use bevy_app::prelude::*;
@@ -81,7 +81,18 @@ const FXAA_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 4182761465141723543);
 
 /// Adds support for Fast Approximate Anti-Aliasing (FXAA)
-pub struct FxaaPlugin;
+///
+/// Options here default to `false`.
+///
+/// Should be constructed using the [`inherit_from`](FxaaPlugin::inherit_from) method.
+#[derive(Default, Clone, Copy)]
+pub struct FxaaPlugin {
+    /// Specifies whether tonemapping was enabled for the core2d pipeline
+    tonemapping2d: bool,
+    /// Specifies whether tonemapping was enabled for the core3d pipeline,
+    tonemapping3d: bool,
+}
+
 impl Plugin for FxaaPlugin {
     fn build(&self, app: &mut App) {
         load_internal_asset!(app, FXAA_SHADER_HANDLE, "fxaa.wgsl", Shader::from_wgsl);
@@ -96,23 +107,9 @@ impl Plugin for FxaaPlugin {
             .init_resource::<SpecializedRenderPipelines<FxaaPipeline>>()
             .add_systems(Render, prepare_fxaa_pipelines.in_set(RenderSet::Prepare))
             .add_render_graph_node::<ViewNodeRunner<FxaaNode>>(CORE_3D, core_3d::graph::node::FXAA)
-            .add_render_graph_edges(
-                CORE_3D,
-                &[
-                    core_3d::graph::node::TONEMAPPING,
-                    core_3d::graph::node::FXAA,
-                    core_3d::graph::node::END_MAIN_PASS_POST_PROCESSING,
-                ],
-            )
+            .add_render_graph_edges(CORE_3D, &self.generate_3d_edges())
             .add_render_graph_node::<ViewNodeRunner<FxaaNode>>(CORE_2D, core_2d::graph::node::FXAA)
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    core_2d::graph::node::TONEMAPPING,
-                    core_2d::graph::node::FXAA,
-                    core_2d::graph::node::END_MAIN_PASS_POST_PROCESSING,
-                ],
-            );
+            .add_render_graph_edges(CORE_2D, &self.generate_2d_edges());
     }
 
     fn finish(&self, app: &mut App) {
@@ -121,6 +118,59 @@ impl Plugin for FxaaPlugin {
             Err(_) => return,
         };
         render_app.init_resource::<FxaaPipeline>();
+    }
+}
+
+impl FxaaPlugin {
+    /// Create new by inheriting relevant options (currently: whether tonemapping is on) from the
+    /// core 2d and 3d plugins.
+    pub fn inherit_from(core2d: Core2dPlugin, core3d: Core3dPlugin) -> Self {
+        Self {
+            tonemapping2d: core2d.tonemapping,
+            tonemapping3d: core3d.tonemapping,
+        }
+    }
+
+    /// Generate required edges specifying where the plugin is inserted in the core 2d pipeline
+    /// based on user provided settings.
+    ///
+    /// If tonemapping is enabled for the core 2d pipeline, the edges will be:
+    ///     `[TONEMAPPING, FXAA, END_MAIN_PASS_POST_PROCESSING]`
+    /// Otherwise, the edges will be:
+    ///     `[MAIN_PASS, FXAA, END_MAIN_PASS_POST_PROCESSING]`
+    fn generate_2d_edges(&self) -> [&'static str; 3] {
+        let leading_node = if self.tonemapping2d {
+            core_2d::graph::node::TONEMAPPING
+        } else {
+            core_2d::graph::node::MAIN_PASS
+        };
+
+        [
+            leading_node,
+            core_2d::graph::node::FXAA,
+            core_2d::graph::node::END_MAIN_PASS_POST_PROCESSING,
+        ]
+    }
+
+    /// Generate required edges specifying where the plugin is inserted in the core 3d pipeline
+    /// based on user provided settings.
+    ///
+    /// If tonemapping is enabled for the core 3d pipeline, the edges will be:
+    ///     `[END_MAIN_PASS, FXAA, END_MAIN_PASS_POST_PROCESSING]`
+    /// Otherwise, the edges will be:
+    ///     `[TONEMAPPING, FXAA, END_MAIN_PASS_POST_PROCESSING]`
+    fn generate_3d_edges(&self) -> [&'static str; 3] {
+        let leading_node = if self.tonemapping3d {
+            core_3d::graph::node::TONEMAPPING
+        } else {
+            core_3d::graph::node::END_MAIN_PASS
+        };
+
+        [
+            leading_node,
+            core_3d::graph::node::FXAA,
+            core_3d::graph::node::END_MAIN_PASS_POST_PROCESSING,
+        ]
     }
 }
 
