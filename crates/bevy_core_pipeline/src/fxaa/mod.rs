@@ -139,7 +139,7 @@ impl FxaaPlugin {
     /// Otherwise, the edges will be:
     ///     `[MAIN_PASS, FXAA, END_MAIN_PASS_POST_PROCESSING]`
     fn generate_2d_edges(&self) -> [&'static str; 3] {
-        let leading_node = if self.tonemapping3d {
+        let leading_node = if self.tonemapping2d {
             core_2d::graph::node::TONEMAPPING
         } else {
             core_2d::graph::node::MAIN_PASS
