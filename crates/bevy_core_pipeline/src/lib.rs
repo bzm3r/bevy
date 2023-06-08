@@ -55,8 +55,6 @@ use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 pub struct CorePipelinePlugin {
     pub core2d: Core2dPlugin,
     pub core3d: Core3dPlugin,
-    pub bloom: BloomPlugin,
-    pub fxaa: FxaaPlugin,
 }
 
 impl Plugin for CorePipelinePlugin {
