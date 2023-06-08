@@ -59,13 +59,13 @@ use crate::{
     upscaling::UpscalingNode,
 };
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Core3dPlugin {
-    /// Specifies whether [`SkyboxPlugin`](SkyboxPlugin) should be enabled
+    /// Specifies whether [`SkyboxPlugin`] should be enabled. Defaults to `true`.
     pub skybox: bool,
-    /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
+    /// Specifies whether [`TonemappingNode`] should be executed. Defaults to `true`.
     pub tonemapping: bool,
-    /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
+    /// Specifies whether [`UpscalingNode`] should be executed. Defaults to `true`.
     pub upscaling: bool,
 }
 
@@ -130,12 +130,22 @@ impl Plugin for Core3dPlugin {
     }
 }
 
+impl Default for Core3dPlugin {
+    fn default() -> Self {
+        Self {
+            skybox: true,
+            tonemapping: true,
+            upscaling: true,
+        }
+    }
+}
+
 impl Core3dPlugin {
     /// Generate required edges based on user provided settings
     ///
-    /// The default edges are (in order): `[PREPASS, START_MAIN_PASS, MAIN_OPAQUE_PASS, 
+    /// The default edges are (in order): `[PREPASS, START_MAIN_PASS, MAIN_OPAQUE_PASS,
     /// MAIN_TRANSPARENT_PASS, END_MAIN_PASS, TONEMAPPING, END_MAIN_PASS_POST_PROCESSING, UPSCALING]`.
-    /// 
+    ///
     /// Out of these, `TONEMAPPING` and `UPSCALING` are optional.
     fn generate_edges(&self) -> Vec<&'static str> {
         use graph::node::*;

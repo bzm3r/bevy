@@ -55,12 +55,8 @@ use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 pub struct CorePipelinePlugin {
     pub core2d: Core2dPlugin,
     pub core3d: Core3dPlugin,
-    pub msaa_writeback: MsaaWritebackPlugin,
-    pub tonemapping: TonemappingPlugin,
-    pub upscaling: UpscalingPlugin,
     pub bloom: BloomPlugin,
     pub fxaa: FxaaPlugin,
-    pub contrast_adaptive_sharpening: CASPlugin,
 }
 
 impl Plugin for CorePipelinePlugin {
@@ -82,8 +78,8 @@ impl Plugin for CorePipelinePlugin {
             .add_plugin(self.core3d)
             .add_plugin(BlitPlugin)
             .add_plugin(MsaaWritebackPlugin)
-            .add_plugin(BloomPlugin)
-            .add_plugin(FxaaPlugin)
+            .add_plugin(BloomPlugin::inherit_from(self.core2d, self.core3d))
+            .add_plugin(FxaaPlugin::inherit_from(self.core2d, self.core3d))
             .add_plugin(CASPlugin);
 
         if self.core2d.tonemapping || self.core3d.tonemapping  {

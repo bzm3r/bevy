@@ -40,11 +40,11 @@ use std::ops::Range;
 
 use crate::{tonemapping::TonemappingNode, upscaling::UpscalingNode};
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Core2dPlugin {
-    /// Specifies whether [`TonemappingNode`](TonemappingNode) should be executed
+    /// Specifies whether [`TonemappingNode`] should be executed. Defaults to `true`.
     pub tonemapping: bool,
-    /// Specifies whether [`UpscalingNode`](TonemappingNode) should be executed
+    /// Specifies whether [`UpscalingNode`] should be executed. Defaults to `true`.
     pub upscaling: bool,
 }
 
@@ -87,6 +87,13 @@ impl Plugin for Core2dPlugin {
         }
 
         render_app.add_render_graph_edges(CORE_2D, &self.generate_edges());
+    }
+}
+
+
+impl Default for Core2dPlugin {
+    fn default() -> Self {
+        Self { tonemapping: true, upscaling: true }
     }
 }
 

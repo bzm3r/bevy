@@ -5,8 +5,8 @@ mod upsampling_pipeline;
 pub use settings::{BloomCompositeMode, BloomPrefilterSettings, BloomSettings};
 
 use crate::{
-    core_2d::{self, CORE_2D},
-    core_3d::{self, CORE_3D},
+    core_2d::{self, Core2dPlugin, CORE_2D},
+    core_3d::{self, Core3dPlugin, CORE_3D},
 };
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, HandleUntyped};
@@ -43,9 +43,12 @@ const BLOOM_TEXTURE_FORMAT: TextureFormat = TextureFormat::Rg11b10Float;
 // 512 behaves well with the UV offset of 0.004 used in bloom.wgsl
 const MAX_MIP_DIMENSION: u32 = 512;
 
+/// Options here default to `false`.
+/// 
+/// Should be constructed using the [`inherit_from`](BloomPlugin::inherit_from) method.
 #[derive(Default, Clone, Copy)]
 pub struct BloomPlugin {
-    /// Specifies whether tonemapping was enabled for the core2d pipeline
+    /// Specifies whether tonemapping was enabled for the core2d pipeline. 
     tonemapping2d: bool,
     /// Specifies whether tonemapping was enabled for the core3d pipeline,
     tonemapping3d: bool,
@@ -105,11 +108,20 @@ impl Plugin for BloomPlugin {
 }
 
 impl BloomPlugin {
+    /// Create new by inheriting relevant options (currently: whether tonemapping is on) from the
+    /// core 2d and 3d plugins.
+    pub fn inherit_from(core2d: Core2dPlugin, core3d: Core3dPlugin) -> Self {
+        Self {
+            tonemapping2d: core2d.tonemapping,
+            tonemapping3d: core3d.tonemapping,
+        }
+    }
+
     /// Generate required edges specifying where the plugin is inserted in the core 2d pipeline
     /// based on user provided settings.
     ///
     /// If tonemapping is enabled for the core 2d pipeline, the edges will be:
-    ///     `[END_MAIN_PASS, BLOOM, TONEMAPPING]`
+    ///     `[MAIN_PASS, BLOOM, TONEMAPPING]`
     /// Otherwise, the edges will be:
     ///     `[MAIN_PASS, BLOOM, END_MAIN_PASS_POST_PROCESSING]`
     fn generate_2d_edges(&self) -> [&'static str; 3] {
