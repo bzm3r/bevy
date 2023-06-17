@@ -1,22 +1,7 @@
 mod camera_2d;
+pub mod graph;
 mod main_pass_2d_node;
 
-pub mod graph {
-    pub const NAME: &str = "core_2d";
-    pub mod input {
-        pub const VIEW_ENTITY: &str = "view_entity";
-    }
-    pub mod node {
-        pub const MSAA_WRITEBACK: &str = "msaa_writeback";
-        pub const MAIN_PASS: &str = "main_pass";
-        pub const BLOOM: &str = "bloom";
-        pub const TONEMAPPING: &str = "tonemapping";
-        pub const FXAA: &str = "fxaa";
-        pub const UPSCALING: &str = "upscaling";
-        pub const CONTRAST_ADAPTIVE_SHARPENING: &str = "contrast_adaptive_sharpening";
-        pub const END_MAIN_PASS_POST_PROCESSING: &str = "end_main_pass_post_processing";
-    }
-}
 pub const CORE_2D: &str = graph::NAME;
 
 pub use camera_2d::*;
@@ -65,7 +50,7 @@ impl Plugin for Core2dPlugin {
                 ),
             );
 
-        use graph::node::*;
+        use graph::Core2dNode;
         render_app
             .add_render_sub_graph(CORE_2D)
             .add_render_graph_node::<MainPass2dNode>(CORE_2D, MAIN_PASS)
