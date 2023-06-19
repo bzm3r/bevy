@@ -5,62 +5,90 @@ use bevy_render::render_graph::{Node, RenderGraphApp};
 
 /// A helper trait for a [`Node`] implementor that allows it to be used easily for the
 /// creation of "pipelines", which are render graphs specialized to a purpose such as
-/// 2D rendering, 3D rendering, and so on.  .  
+/// 2D rendering, 3D rendering, and so on.
 pub trait PipelineNode: Display + Clone + Copy {
-    /// The [`Node`] implementor specifying what this pipeline node will do.
-    type AssociatedNode: Node;
+    /// The underlying [`Node`] that will be inserted by this [`PipelineNode`] into the render graph.
+    type NODE: Default + Node;
+    /// The name given to the render graph node that will be inserted by this [`PipelineNode`].
+    const NODE_NAME: &'static str;
 
-    /// Label of this node.
-    fn label(&self) -> &'static str;
-
-    /// Adds the underlying [`Node`] of interest to the graph of the rendering app.
-    fn add_node(&self, sub_graph_name: &str, render_app: &mut App) {
-        render_app.add_render_graph_node::<Self::AssociatedNode>(sub_graph_name, self.to_string());
+    /// Adds [`NODE`](Self::NODE) to specified sub graph of the rendering app.
+    fn add_node(&self, render_app: &mut App, sub_graph_name: &str) {
+        render_app.add_render_graph_node::<Self::NODE>(sub_graph_name, Self::NODE_NAME);
     }
+}
+
+/// Facilitates implementation of [`PipelineNode`].
+///
+/// You can use it in the following ways:
+///
+/// 1. By providing the identifier of the [`PipelineNode`] implementor, the underlying [`NODE`](PipelineNode::NODE)
+/// it represents, and its [`NODE_NAME`](PipelineNode::NODE_NAME):
+/// ```
+/// use crate::tonemapping::node::TonemappingNode;
+///
+/// struct CustomPipelineTonemapping;
+///
+/// pipeline_node!(CustomPipelineTonemapping, TonemappingNode, "tonemapping");
+/// ```
+///
+/// 2. By providing only the identifier of the [`PipelineNode`] implementor and its underlying
+/// [`NODE`](PipelineNode::NODE):
+/// ```
+/// use crate::tonemapping::node::TonemappingNode;
+///
+/// struct CustomPipelineTonemapping;
+///
+/// pipeline_node!(CustomPipelineTonemapping, TonemappingNode);
+/// ```
+/// This will set [`NODE_NAME`](PipelineNode::NODE_NAME) to be the same as the identifier of the [`PipelineNode`]
+/// implementor; in this case: "CustomPipelineTonemapping".
+#[macro_export]
+macro_rules! pipeline_node {
+    ( $pipeline_node:ident, $node:ident, $node_name:literal ) => {
+        impl PipelineNode for $pipeline_node {
+            type NODE = $node;
+            const NODE_NAME = $node_name;
+        }
+    };
+    ( $pipeline_node:ident, $node:ident ) => {
+        impl PipelineNode for $pipeline_node {
+            type NODE = $node;
+            const NODE_NAME = stringify!($pipeline_node);
+        }
+     }
 }
 
 /// An sequence of [`PipelineNode`]s that will be connected by edges that mirror the sequence order.
-///
-/// Usually such a sequence of nodes makes up the primary trunk of a render graph.
-pub struct PipelineSequence<N: PipelineNode>(Vec<N>);
+pub struct PipelineSequence(Vec<Box<dyn PipelineNode<NODE = dyn Node>>>);
 
-impl<N: PipelineNode> PipelineSequence<N> {
+impl PipelineSequence {
     /// Create a new sequence from a slice of [`PipelineNode`] implementors.
-    fn new(raw_sequence: &[N]) -> Result<PipelineSequence<N>, String> {
-        PipelineSequence(raw_sequence.collect())
+    fn new(raw_sequence: &[Box<Box<dyn PipelineNode<NODE = dyn Node>>>]) -> PipelineSequence {
+        PipelineSequence(raw_sequence.iter().copied().collect())
     }
 
     /// Get the labels of each [`PipelineNode`] in this sequence.
-    fn labels(&self) -> Vec<&'static str> {
+    fn connection_sequence(&self) -> Vec<&'static str> {
         self.0
             .iter()
-            .map(|pipeline_node| pipeline_node.into())
+            .map(|pipeline_node| pipeline_node::NODE_NAME)
             .collect()
     }
 
-    fn insert_sequence(&self, sub_graph_name: &str, render_app: &mut App) {
+    /// Insert this pipeline sequence as a new sub-graph of the [`RenderGraph`](bevy::render::render_graph::RenderGraph)
+    /// of the supplied render [`App`].
+    fn create_new_sub_graph(&self, render_app: &mut App, sub_graph_name: &str) {
         render_app.add_render_sub_graph(sub_graph_name);
-        let mut labels = Vec::with_capacity(self.0.len());
-        for labelled_node in self.0.iter() {
-            labelled_node.add_node(sub_graph_name, render_app);
-            labels.push(labelled_node.label());
+        self.insert_into_sub_graph(render_app, sub_graph_name)
+    }
+
+    /// Insert this pipeline sequence into an existing sub-graph of the
+    /// [`RenderGraph`](bevy::render::render_graph::RenderGraph) of the supplied render [`App`].
+    fn insert_into_sub_graph(&self, render_app: &mut App, sub_graph_name: &str) {
+        for pipeline_node in self.0.iter() {
+            pipeline_node.add_node(sub_graph_name, render_app);
         }
-        render_app.add_render_graph_edges(sub_graph_name, &labels);
+        render_app.add_render_graph_edges(sub_graph_name, &self.connection_sequence());
     }
 }
-
-// render_app
-//     .add_render_sub_graph(CORE_2D)
-//     .add_render_graph_node::<MainPass2dNode>(CORE_2D, MAIN_PASS)
-//     .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_2D, TONEMAPPING)
-//     .add_render_graph_node::<EmptyNode>(CORE_2D, END_MAIN_PASS_POST_PROCESSING)
-//     .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_2D, UPSCALING)
-//     .add_render_graph_edges(
-//         CORE_2D,
-//         &[
-//             MAIN_PASS,
-//             TONEMAPPING,
-//             END_MAIN_PASS_POST_PROCESSING,
-//             UPSCALING,
-//         ],
-//     );

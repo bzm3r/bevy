@@ -15,7 +15,7 @@ pub mod old_node {
     pub const END_MAIN_PASS_POST_PROCESSING: &str = "end_main_pass_post_processing";
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Core2dNode {
     MsaaWriteback,
     MainPass,
@@ -27,20 +27,14 @@ pub enum Core2dNode {
     EndMainPassPostProcessing,
 }
 
-impl PipelineNode for Core2dNode {
-    fn label(&self) -> &'static str {
-        match self {
-            Core2dNode::MsaaWriteback => "msaa_writeback",
-            Core2dNode::MainPass => "main_pass",
-            Core2dNode::Bloom => "bloom",
-            Core2dNode::Tonemapping => "tonemapping",
-            Core2dNode::Fxaa => "fxaa",
-            Core2dNode::Upscaling => "upscaling",
-            Core2dNode::ContrastAdaptiveSharpening => "contrast_adaptive_sharpening",
-            Core2dNode::EndMainPassPostProcessing => "end_main_pass_post_processing",
-        }
+impl Display for Core2dNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
+}
 
+impl PipelineNode for Core2dNode {
+    type AssociatedNode = ;
     fn add_node(&self, sub_graph_name: &str, render_app: &mut bevy_app::App) {
         match self {
             MsaaWriteback => {
@@ -95,6 +89,8 @@ impl PipelineNode for Core2dNode {
 //             UPSCALING,
 //         ],
 //     );
+
+use std::fmt::Display;
 
 use Core2dNode::*;
 
