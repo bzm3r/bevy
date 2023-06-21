@@ -116,6 +116,7 @@ impl Plugin for UiPlugin {
             .register_type::<UiImageSize>()
             .register_type::<UiRect>()
             .register_type::<Val>()
+            .register_type::<BorderColor>()
             .register_type::<widget::Button>()
             .register_type::<widget::Label>()
             .register_type::<ZIndex>()
@@ -156,8 +157,12 @@ impl Plugin for UiPlugin {
                 .ambiguous_with(widget::text_system);
 
             system
-        })
-        .add_systems(
+        });
+        app.add_systems(
+            PostUpdate,
+            widget::update_atlas_content_size_system.before(UiSystem::Layout),
+        );
+        app.add_systems(
             PostUpdate,
             (
                 ui_layout_system
