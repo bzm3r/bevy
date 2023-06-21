@@ -4,7 +4,10 @@ use crate::{
     renderer::RenderContext,
     view::ExtractedWindows,
 };
-use bevy_ecs::{prelude::QueryState, world::World};
+use bevy_ecs::{
+    prelude::QueryState,
+    world::{FromWorld, World},
+};
 use bevy_utils::HashSet;
 use wgpu::{LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor};
 
@@ -12,8 +15,8 @@ pub struct CameraDriverNode {
     cameras: QueryState<&'static ExtractedCamera>,
 }
 
-impl CameraDriverNode {
-    pub fn new(world: &mut World) -> Self {
+impl FromWorld for CameraDriverNode {
+    fn from_world(world: &mut World) -> Self {
         Self {
             cameras: world.query(),
         }

@@ -9,7 +9,7 @@ pub use projection::*;
 
 use crate::{render_graph::RenderGraph, ExtractSchedule, Render, RenderApp, RenderSet};
 use bevy_app::{App, Plugin};
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy_ecs::{schedule::IntoSystemConfigs, world::FromWorld};
 
 #[derive(Default)]
 pub struct CameraPlugin;
@@ -31,7 +31,7 @@ impl Plugin for CameraPlugin {
                 .init_resource::<SortedCameras>()
                 .add_systems(ExtractSchedule, extract_cameras)
                 .add_systems(Render, sort_cameras.in_set(RenderSet::Prepare));
-            let camera_driver_node = CameraDriverNode::new(&mut render_app.world);
+            let camera_driver_node = CameraDriverNode::from_world(&mut render_app.world);
             let mut render_graph = render_app.world.resource_mut::<RenderGraph>();
             render_graph.add_node(crate::main_graph::node::CAMERA_DRIVER, camera_driver_node);
         }
