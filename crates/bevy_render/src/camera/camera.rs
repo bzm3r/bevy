@@ -76,8 +76,8 @@ pub struct ComputedCameraValues {
     old_viewport_size: Option<UVec2>,
 }
 
-/// The defining component for camera entities, storing information about how and what to render
-/// through this camera.
+/// The defining [`Component`] for camera entities,
+/// storing information about how and what to render through this camera.
 ///
 /// The [`Camera`] component is added to an entity to define the properties of the viewpoint from
 /// which rendering occurs. It defines the position of the view to render, the projection method
@@ -771,3 +771,9 @@ impl TemporalJitter {
         projection.z_axis.y += jitter.y;
     }
 }
+
+/// Camera component specifying a mip bias to apply when sampling from material textures.
+///
+/// Often used in conjunction with antialiasing post-process effects to reduce textures blurriness.
+#[derive(Component)]
+pub struct MipBias(pub f32);
