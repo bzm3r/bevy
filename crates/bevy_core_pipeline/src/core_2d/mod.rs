@@ -1,8 +1,6 @@
 mod camera_2d;
-pub mod graph;
 mod main_pass_2d_node;
-
-pub const CORE_2D: &str = graph::NAME;
+pub mod pipeline;
 
 pub use camera_2d::*;
 pub use main_pass_2d_node::*;

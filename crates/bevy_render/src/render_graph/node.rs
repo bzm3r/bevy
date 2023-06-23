@@ -11,7 +11,11 @@ use bevy_ecs::{
     world::{FromWorld, World},
 };
 use downcast_rs::{impl_downcast, Downcast};
-use std::{borrow::Cow, fmt::Debug, ops::Deref};
+use std::{
+    borrow::Cow,
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 use thiserror::Error;
 
 define_atomic_id!(NodeId);
@@ -80,14 +84,10 @@ impl Node for Box<dyn Node> {
         self.deref().output()
     }
 
-    /// Updates internal node state using the current render [`World`] prior to the run method.
     fn update(&mut self, _world: &mut World) {
-        self.deref().update(_world)
+        self.deref_mut().update(_world)
     }
 
-    /// Runs the graph node logic, issues draw calls, updates the output slots and
-    /// optionally queues up subgraphs for execution. The graph data, input and output values are
-    /// passed via the [`RenderGraphContext`].
     fn run(
         &self,
         graph: &mut RenderGraphContext,
@@ -108,6 +108,28 @@ impl Node for Box<dyn Node> {
         self
     }
 }
+
+// /// A newtype struct facilitating conversions between `Node` and `Box<dyn Node>`.
+// pub struct DynamicNode(Box<dyn Node>);
+
+// impl<T: Node + 'static> Into<T> for Box<dyn Node> {
+//     fn into(node: Box<dyn Node>) -> T {
+//         Box::new(node)
+//     }
+// }
+
+// impl From<Box<dyn Node>> for DynamicNode {
+//     fn from(box_dyn_node: Box<dyn Node>) -> Self {
+//         DynamicNode(box_dyn_node)
+//     }
+// }
+
+// impl From<DynamicNode> for Box<dyn Node> {
+//     fn from(dynamic_node: DynamicNode) -> Self {
+//         let DynamicNode(inner) = dynamic_node;
+//         inner
+//     }
+// }
 
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum NodeRunError {
@@ -255,16 +277,16 @@ impl Debug for NodeState {
 impl NodeState {
     /// Creates an [`NodeState`] without edges, but the `input_slots` and `output_slots`
     /// are provided by the `node`.
-    pub fn new(id: NodeId, node: impl Into<Box<dyn Node>>) -> Self {
-        let node: Box<dyn Node> = node.into();
+    pub fn new(id: NodeId, node: impl Node) -> Self {
+        let type_name = node.type_name();
 
         NodeState {
             id,
             name: None,
             input_slots: node.input().into(),
             output_slots: node.output().into(),
-            node,
-            type_name: node.type_name(),
+            node: node.into_box(),
+            type_name,
             edges: Edges {
                 id,
                 input_edges: Vec::new(),

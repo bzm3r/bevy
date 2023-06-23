@@ -113,7 +113,7 @@ impl Plugin for BloomPlugin {
 }
 
 #[derive(Default)]
-struct BloomNode;
+pub struct BloomNode;
 impl ViewNode for BloomNode {
     type ViewQuery = (
         &'static ExtractedCamera,

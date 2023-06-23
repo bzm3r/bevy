@@ -29,7 +29,8 @@ impl Plugin for MsaaWritebackPlugin {
             queue_msaa_writeback_pipelines.in_set(RenderSet::Queue),
         );
         {
-            use core_2d::graph::node::*;
+            let msaa_pipeline_sequence = core_2d::pipeline::generate_msaa_writeback_pipeline();
+            msaa_pipeline_sequence.insert_into_sub_graph(render_app, )
             render_app
                 .add_render_graph_node::<MsaaWritebackNode>(CORE_2D, MSAA_WRITEBACK)
                 .add_render_graph_edge(CORE_2D, MSAA_WRITEBACK, MAIN_PASS);

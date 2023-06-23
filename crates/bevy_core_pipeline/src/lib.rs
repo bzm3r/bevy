@@ -14,7 +14,7 @@ mod skybox;
 mod taa;
 pub mod tonemapping;
 pub mod upscaling;
-pub mod graph;
+pub mod pipelining;
 
 pub use skybox::Skybox;
 

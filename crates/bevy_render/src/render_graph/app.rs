@@ -22,7 +22,7 @@ pub trait RenderGraphApp {
         &mut self,
         sub_graph_name: &'static str,
         node_name: impl Into<Cow<'static, str>>,
-        node: impl Into<Box<dyn Node>>,
+        node: impl Node,
     ) -> &mut Self;
     /// Automatically add the required node edges based on the given ordering
     fn add_render_graph_edges(
@@ -30,6 +30,8 @@ pub trait RenderGraphApp {
         sub_graph_name: &'static str,
         edges: Vec<impl Into<NodeLabel>>,
     ) -> &mut Self;
+    /// Automatically add the required node edges based on the given ordering
+    fn add_edges(&mut self, sub_graph_name: &'static str, edges: Vec<NodeLabel>) -> &mut Self;
     /// Add node edge to the specified graph
     fn add_render_graph_edge(
         &mut self,
@@ -53,13 +55,13 @@ impl RenderGraphApp for App {
         &mut self,
         sub_graph_name: &'static str,
         node_name: impl Into<Cow<'static, str>>,
-        node: impl Into<Box<dyn Node>>,
+        node: impl Node,
     ) -> &mut Self {
         let mut render_graph = self.world.get_resource_mut::<RenderGraph>().expect(
             "RenderGraph not found. Make sure you are using add_render_graph_node on the RenderApp",
         );
         if let Some(graph) = render_graph.get_sub_graph_mut(sub_graph_name) {
-            graph.add_node(node_name, node);
+            graph.add_node(node_name, node.into_box());
         } else {
             warn!("Tried adding a render graph node to {sub_graph_name} but the sub graph doesn't exist");
         }
@@ -71,11 +73,16 @@ impl RenderGraphApp for App {
         sub_graph_name: &'static str,
         edges: Vec<impl Into<NodeLabel>>,
     ) -> &mut Self {
+        let edges = edges.into_iter().map(Into::<NodeLabel>::into).collect();
+        add_edges(edges)
+    }
+
+    fn add_edges(&mut self, sub_graph_name: &'static str, edges: Vec<NodeLabel>) -> &mut Self {
         let mut render_graph = self.world.get_resource_mut::<RenderGraph>().expect(
             "RenderGraph not found. Make sure you are using add_render_graph_edges on the RenderApp",
         );
         if let Some(graph) = render_graph.get_sub_graph_mut(sub_graph_name) {
-            graph.add_edges_between(edges.into_iter().map(Into::<NodeLabel>::into).collect());
+            graph.add_edges_between(edges);
         } else {
             warn!("Tried adding render graph edges to {sub_graph_name} but the sub graph doesn't exist");
         }

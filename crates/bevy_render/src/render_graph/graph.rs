@@ -75,7 +75,7 @@ impl RenderGraph {
     pub fn set_input(&mut self, inputs: Vec<SlotInfo>) -> NodeId {
         assert!(self.input_node.is_none(), "Graph already has an input node");
 
-        let id = self.add_node("GraphInputNode", GraphInputNode { inputs });
+        let id = self.add_node("GraphInputNode", GraphInputNode { inputs }.into_box());
         self.input_node = Some(id);
         id
     }
@@ -109,7 +109,7 @@ impl RenderGraph {
     pub fn add_node(&mut self, name: impl Into<Cow<'static, str>>, node: impl Node) -> NodeId {
         let id = NodeId::new();
         let name = name.into();
-        let mut node_state = NodeState::new(id, node);
+        let mut node_state = NodeState::new(id, node.into_box());
         node_state.name = Some(name.clone());
         self.nodes.insert(id, node_state);
         self.node_names.insert(name, id);
@@ -769,10 +769,10 @@ mod tests {
     #[test]
     fn test_graph_edges() {
         let mut graph = RenderGraph::default();
-        let a_id = graph.add_node("A", TestNode::new(0, 1));
-        let b_id = graph.add_node("B", TestNode::new(0, 1));
-        let c_id = graph.add_node("C", TestNode::new(1, 1));
-        let d_id = graph.add_node("D", TestNode::new(1, 0));
+        let a_id = graph.add_node("A", TestNode::new(0, 1).into_box());
+        let b_id = graph.add_node("B", TestNode::new(0, 1).into_box());
+        let c_id = graph.add_node("C", TestNode::new(1, 1).into_box());
+        let d_id = graph.add_node("D", TestNode::new(1, 0).into_box());
 
         graph.add_slot_edge("A", "out_0", "C", "in_0");
         graph.add_node_edge("B", "C");
@@ -842,9 +842,9 @@ mod tests {
     fn test_slot_already_occupied() {
         let mut graph = RenderGraph::default();
 
-        graph.add_node("A", TestNode::new(0, 1));
-        graph.add_node("B", TestNode::new(0, 1));
-        graph.add_node("C", TestNode::new(1, 1));
+        graph.add_node("A", TestNode::new(0, 1).into_box());
+        graph.add_node("B", TestNode::new(0, 1).into_box());
+        graph.add_node("C", TestNode::new(1, 1).into_box());
 
         graph.add_slot_edge("A", 0, "C", 0);
         assert_eq!(
@@ -862,8 +862,8 @@ mod tests {
     fn test_edge_already_exists() {
         let mut graph = RenderGraph::default();
 
-        graph.add_node("A", TestNode::new(0, 1));
-        graph.add_node("B", TestNode::new(1, 0));
+        graph.add_node("A", TestNode::new(0, 1).into_box());
+        graph.add_node("B", TestNode::new(1, 0).into_box());
 
         graph.add_slot_edge("A", 0, "B", 0);
         assert_eq!(
@@ -898,9 +898,9 @@ mod tests {
         }
 
         let mut graph = RenderGraph::default();
-        let a_id = graph.add_node("A", SimpleNode);
-        let b_id = graph.add_node("B", SimpleNode);
-        let c_id = graph.add_node("C", SimpleNode);
+        let a_id = graph.add_node("A", SimpleNode.into_box());
+        let b_id = graph.add_node("B", SimpleNode.into_box());
+        let c_id = graph.add_node("C", SimpleNode.into_box());
 
         graph.add_node_edges(&["A", "B", "C"]);
 
