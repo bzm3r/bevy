@@ -1,14 +1,20 @@
 use bevy_app::App;
 use bevy_ecs::world::{FromWorld, World};
-use bevy_render::render_graph::{Node, NodeLabel, RenderGraphApp};
+use bevy_render::render_graph::{Node, RenderGraphApp};
 use std::fmt::{Debug, Error, Formatter};
-use std::{borrow::Cow, marker::PhantomData};
+use std::marker::PhantomData;
+use std::ops::Deref;
 
 pub trait NodeCreator {
     fn create_node(&self, world: &mut World) -> Box<dyn Node>;
 }
 
-#[derive(Copy)]
+impl NodeCreator for Box<dyn NodeCreator> {
+    fn create_node(&self, world: &mut World) -> Box<dyn Node> {
+        self.deref().create_node(world)
+    }
+}
+
 pub struct NodeFactory<N: Node + FromWorld> {
     pub node_type: PhantomData<N>,
 }
@@ -29,17 +35,13 @@ impl<N: Node + FromWorld> Clone for NodeFactory<N> {
     }
 }
 
+impl<N: Node + FromWorld> Copy for NodeFactory<N> {}
+
 impl<N: Node + FromWorld> Debug for NodeFactory<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "NodeFactory {{ node_type: {:?} }}", self.node_type)
     }
 }
-
-// macro_rules! create_node_factory {
-//     ( t:ty ) => {
-
-//     }
-// }
 
 impl<N: Node + FromWorld> NodeCreator for NodeFactory<N> {
     fn create_node(&self, world: &mut World) -> Box<dyn Node> {
@@ -57,10 +59,7 @@ pub trait PipelineNode {
     type Factory: NodeCreator;
 
     /// The label of this pipeline node in the render graph.
-    fn label(&self) -> &str;
-
-    /// Clone the label of this pipeline node in the render graph.
-    fn clone_label(&self) -> Cow<'static, str>;
+    fn label(&self) -> &'static str;
 
     /// An object safe [`Node`] creator.
     fn node_factory(&self) -> Self::Factory;
@@ -68,7 +67,7 @@ pub trait PipelineNode {
     /// Adds [`NODE`](Self::NODE) to specified sub graph of the rendering app.
     fn add_node(&self, render_app: &mut App, sub_graph_name: &str) {
         let node = self.node_factory().create_node(&mut render_app.world);
-        render_app.add_node_to_render_graph(sub_graph_name, self.clone_label(), node);
+        render_app.add_node_to_render_graph(sub_graph_name, self.label(), node);
     }
 }
 
@@ -77,10 +76,12 @@ pub trait PipelineNode {
 #[macro_export]
 macro_rules! generate_default_pipeline_node_label {
     ( $pipeline_node:ident, $label: literal ) => {
-        $label.into()
+        $label
     };
     ( $pipeline_node:ident ) => {
-        stringify!($pipeline_node).into()
+        stringify!(paste! {
+            [<$pipeline_node:snake:lower>]
+        })
     };
 }
 
@@ -168,44 +169,36 @@ macro_rules! generate_default_pipeline_node_label {
 #[macro_export]
 macro_rules! pipeline_node {
     ( $pipeline_node:ident, $node:ty $(, $label:literal)? ) => {
+        paste! {
+            pub const [<$pipeline_node:snake:upper>]: &str = $crate::pipelining::generate_default_pipeline_node_label!($pipeline_node $(, $label:literal)?);
+        }
         /// Auto-generated struct, using [`pipeline_node!](bevy_core_pipeline::pipelining::pipeline_node).
+        ///
+        /// This is almost always use boxed, so the `new` method returns a `Box<Self>` instead of `Self`.
         #[derive(Clone, Debug)]
         pub struct $pipeline_node {
-            label: std::borrow::Cow<'static, str>,
-            node_factory: $crate::pipelining::NodeFactory<$node>,
+            node_factory: std::boxed::Box<$crate::pipelining::NodeFactory<$node>>,
         }
 
         impl $pipeline_node {
-            fn new(label: impl Into<std::borrow::Cow<'static, str>>) -> Self {
-                $pipeline_node {
-                    label: label.into(),
-                    node_factory: $crate::pipelining::NodeFactory::<$node>::default(),
-                }
+            fn new() -> std::boxed::Box<Self> {
+                std::boxed::Box::new($pipeline_node {
+                    node_factory: std::boxed::Box::new($crate::pipelining::NodeFactory::<$node>::default()),
+                })
             }
         }
 
         impl $crate::pipelining::PipelineNode for $pipeline_node {
-            type Factory = $crate::pipelining::NodeFactory<$node>;
+            type Factory = Box<dyn $crate::pipelining::NodeCreator>;
 
-            fn label(&self) -> &str {
-                &self.label
+            /// Get the label of this pipeline node.
+            fn label(&self) -> &'static str {
+                $crate::pipelining::generate_default_pipeline_node_label!($pipeline_node $(, $label:literal)?)
             }
 
-            fn clone_label(&self) -> std::borrow::Cow<'static, str> {
-                self.label.clone()
-            }
-
+            /// Get the node factory for this pipeline node.
             fn node_factory(&self) -> Self::Factory {
                 self.node_factory
-            }
-        }
-
-        impl Default for $pipeline_node {
-            fn default() -> Self {
-                $pipeline_node {
-                    label: $crate::pipelining::generate_default_pipeline_node_label!($pipeline_node $(, $label:literal)?),
-                    node_factory: $crate::pipelining::NodeFactory::default(),
-                }
             }
         }
     };
@@ -219,13 +212,13 @@ macro_rules! pipeline_nodes {
 }
 
 /// Helpful shorthand for making code more readable.
-pub type DynamicPipelineNode = Box<dyn PipelineNode<Factory = dyn NodeCreator>>;
+pub type DynamicPipelineNode = Box<dyn PipelineNode<Factory = Box<dyn NodeCreator>>>;
 
 /// An sequence of [`PipelineNode`]s that will be connected by edges that mirror the sequence order.
 pub struct PipelineSequence {
     pipeline_label: &'static str,
     node_sequence: Vec<DynamicPipelineNode>,
-    label_sequence: Vec<String>,
+    label_sequence: Vec<&'static str>,
 }
 
 impl PipelineSequence {
@@ -234,7 +227,7 @@ impl PipelineSequence {
         pipeline_label: &'static str,
         node_sequence: Vec<DynamicPipelineNode>,
     ) -> PipelineSequence {
-        let label_sequence = node_sequence.iter().map(|n| n.label().into()).collect();
+        let label_sequence = node_sequence.iter().map(|n| n.label()).collect();
         PipelineSequence {
             pipeline_label,
             node_sequence,
@@ -264,13 +257,13 @@ impl PipelineSequence {
         &self,
         render_app: &mut App,
         sub_graph_name: &str,
-        existing_root: Option<impl Into<NodeLabel>>,
-        existing_target: Option<impl Into<NodeLabel>>,
+        existing_root: Option<&'static str>,
+        existing_target: Option<&'static str>,
     ) {
         for pipeline_node in self.node_sequence.iter() {
             pipeline_node.add_node(render_app, sub_graph_name);
         }
-        render_app.add_edges(
+        render_app.add_render_graph_edges(
             sub_graph_name,
             existing_root
                 .into_iter()

@@ -1,6 +1,6 @@
 mod camera_2d;
+pub mod graph;
 mod main_pass_2d_node;
-pub mod pipeline;
 
 pub use camera_2d::*;
 pub use main_pass_2d_node::*;
@@ -10,7 +10,6 @@ use bevy_ecs::prelude::*;
 use bevy_render::{
     camera::Camera,
     extract_component::ExtractComponentPlugin,
-    render_graph::{EmptyNode, RenderGraphApp, ViewNodeRunner},
     render_phase::{
         batch_phase_system, sort_phase_system, BatchedPhaseItem, CachedRenderPipelinePhaseItem,
         DrawFunctionId, DrawFunctions, PhaseItem, RenderPhase,
@@ -21,9 +20,12 @@ use bevy_render::{
 use bevy_utils::FloatOrd;
 use std::ops::Range;
 
-use crate::{tonemapping::TonemappingNode, upscaling::UpscalingNode};
+use self::graph::{Core2dPipelineSettings, CORE_2D};
 
-pub struct Core2dPlugin;
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Core2dPlugin {
+    pub core_pipeline_settings: Core2dPipelineSettings,
+}
 
 impl Plugin for Core2dPlugin {
     fn build(&self, app: &mut App) {
@@ -48,22 +50,9 @@ impl Plugin for Core2dPlugin {
                 ),
             );
 
-        use graph::Core2dNode;
-        render_app
-            .add_render_sub_graph(CORE_2D)
-            .add_render_graph_node::<MainPass2dNode>(CORE_2D, MAIN_PASS)
-            .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_2D, TONEMAPPING)
-            .add_render_graph_node::<EmptyNode>(CORE_2D, END_MAIN_PASS_POST_PROCESSING)
-            .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_2D, UPSCALING)
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    MAIN_PASS,
-                    TONEMAPPING,
-                    END_MAIN_PASS_POST_PROCESSING,
-                    UPSCALING,
-                ],
-            );
+        use graph::*;
+        let core_sequence = create_core_sequence(self.core_pipeline_settings);
+        core_sequence.create_new_sub_graph(render_app, CORE_2D);
     }
 }
 

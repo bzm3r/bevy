@@ -9,12 +9,12 @@ pub mod core_3d;
 pub mod fullscreen_vertex_shader;
 pub mod fxaa;
 pub mod msaa_writeback;
+pub mod pipelining;
 pub mod prepass;
 mod skybox;
 mod taa;
 pub mod tonemapping;
 pub mod upscaling;
-pub mod pipelining;
 
 pub use skybox::Skybox;
 
@@ -52,8 +52,10 @@ use bevy_app::{App, Plugin};
 use bevy_asset::load_internal_asset;
 use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 
-#[derive(Default)]
-pub struct CorePipelinePlugin;
+#[derive(Default, Copy, Clone)]
+pub struct CorePipelinePlugin {
+    pub core_2d: Core2dPlugin,
+}
 
 impl Plugin for CorePipelinePlugin {
     fn build(&self, app: &mut App) {
@@ -70,10 +72,12 @@ impl Plugin for CorePipelinePlugin {
             .register_type::<NormalPrepass>()
             .init_resource::<ClearColor>()
             .add_plugin(ExtractResourcePlugin::<ClearColor>::default())
-            .add_plugin(Core2dPlugin)
+            .add_plugin(self.core_2d)
             .add_plugin(Core3dPlugin)
             .add_plugin(BlitPlugin)
-            .add_plugin(MsaaWritebackPlugin)
+            .add_plugin(MsaaWritebackPlugin::inherit_from(
+                self.core_2d.core_pipeline_settings,
+            ))
             .add_plugin(TonemappingPlugin)
             .add_plugin(UpscalingPlugin)
             .add_plugin(BloomPlugin)

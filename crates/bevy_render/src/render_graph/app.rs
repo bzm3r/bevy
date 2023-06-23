@@ -74,7 +74,7 @@ impl RenderGraphApp for App {
         edges: Vec<impl Into<NodeLabel>>,
     ) -> &mut Self {
         let edges = edges.into_iter().map(Into::<NodeLabel>::into).collect();
-        add_edges(edges)
+        self.add_edges(sub_graph_name, edges)
     }
 
     fn add_edges(&mut self, sub_graph_name: &'static str, edges: Vec<NodeLabel>) -> &mut Self {
