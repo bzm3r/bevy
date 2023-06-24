@@ -22,7 +22,7 @@ use std::ops::Range;
 
 use self::graph::{Core2dPipelineSettings, CORE_2D};
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Core2dPlugin {
     pub core_pipeline_settings: Core2dPipelineSettings,
 }

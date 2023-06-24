@@ -60,6 +60,35 @@ use required::*;
 #[derive(Clone, Debug)]
 pub struct Core2dPipelineSettings(HashMap<&'static str, bool>);
 
+pub trait PipelineSettings {
+    /// Get a reference to the inner hashmap.
+    fn get_map(&self) -> &HashMap<&'static str, bool>;
+    /// Get a mutable reference to the inner hashmap.
+    fn get_map_mut(&mut self) -> &mut HashMap<&'static str, bool>;
+    /// Get the boolean associated with this label. If the label does not exist, `true` is returned.
+    fn get_bool(&self, label: &'static str) -> Option<bool>;
+    /// Set the boolean associated with this label, and return the old value.
+    fn set_bool(&mut self, label: &'static str, value: bool);
+}
+
+impl PipelineSettings for Core2dPipelineSettings {
+    fn get_map(&self) -> &HashMap<&'static str, bool> {
+        &self.0
+    }
+
+    fn get_map_mut(&mut self) -> &mut HashMap<&'static str, bool> {
+        &mut self.0
+    }
+
+    fn get_bool(&self, label: &'static str) -> bool {
+        self.0.get(label).copied().unwrap_or(true)
+    }
+
+    fn set_bool(&self, label: &'static str, value: bool) -> Option<bool> {
+        self.0.insert(label, value).copied()
+    }
+}
+
 impl Default for Core2dPipelineSettings {
     fn default() -> Self {
         Core2dPipelineSettings(HashMap::from([
@@ -122,7 +151,9 @@ macro_rules! create_simple_sequencer {
             configuration (see the [`required`] and [`optional`] sub-modules. for further explanation)")? ":\n"]
             #[doc = "" $("[`" $node_ty "`]")" `->` "+ "" ]
             pub fn [<create_ $sequence_id _sequence>]($([< $settings_type:lower:snake  >]: $settings_type)?) -> PipelineSequence {
+                #[allow(unused_imports)]
                 use optional::*;
+                #[allow(unused_imports)]
                 use required::*;
 
                 let node_sequence: Vec<DynamicPipelineNode> = vec![$($node_ty::new()),+];
@@ -151,33 +182,4 @@ create_simple_sequencer!(
     Core2dPipelineSettings
 );
 
-// pub fn create_core_sequence(settings: Core2dPipelineSettings) -> PipelineSequence {
-//     use optional::*;
-//     use required::*;
-
-//     let node_sequence: Vec<DynamicPipelineNode> = vec![
-//         MainPass::new(),
-//         Bloom::new(),
-//         Tonemapping::new(),
-//         Fxaa::new(),
-//         EndMainPassPostProcessing::new(),
-//         Upscaling::new(),
-//     ];
-
-//     PipelineSequence::new(
-//         CORE_2D,
-//         node_sequence
-//             .into_iter()
-//             .filter(|x| settings.test_core_sequence_inclusion(x))
-//             .collect(),
-//     )
-// }
-
-/// Creates the default Core 2D rendering pipeline. It consists of the following nodes in sequence:
-///
-/// [`MsaaWriteback`] `->` [`MainPass`]
-pub fn create_msaa_writeback_sequence(settings: Core2dPipelineSettings) -> PipelineSequence {
-    let node_sequence: Vec<DynamicPipelineNode> = vec![MsaaWriteback::new()];
-
-    PipelineSequence::new(MSAA_WRITEBACK, node_sequence)
-}
+create_simple_sequencer!("MSAA writeback", msaa_writeback; MsaaWriteback);

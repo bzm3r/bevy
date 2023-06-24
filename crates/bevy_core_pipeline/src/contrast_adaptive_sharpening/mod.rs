@@ -1,5 +1,8 @@
 use crate::{
-    core_2d::{self, CORE_2D},
+    core_2d::{
+        self,
+        graph::{Core2dPipelineSettings, CORE_2D, PipelineSettings},
+    },
     core_3d::{self, CORE_3D},
     fullscreen_vertex_shader::fullscreen_shader_vertex_state,
 };
@@ -96,7 +99,9 @@ const CONTRAST_ADAPTIVE_SHARPENING_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 6925381244141981602);
 
 /// Adds Support for Contrast Adaptive Sharpening (CAS).
-pub struct CASPlugin;
+pub struct CASPlugin {
+    core_2d_settings: Core2dPipelineSettings,
+}
 
 impl Plugin for CASPlugin {
     fn build(&self, app: &mut App) {
@@ -135,19 +140,22 @@ impl Plugin for CASPlugin {
                     ],
                 );
         }
+
         {
-            use core_2d::graph::node::*;
-            render_app
-                .add_render_graph_node::<CASNode>(CORE_2D, CONTRAST_ADAPTIVE_SHARPENING)
-                .add_render_graph_edge(CORE_2D, TONEMAPPING, CONTRAST_ADAPTIVE_SHARPENING)
-                .add_render_graph_edges(
-                    CORE_2D,
-                    &[
-                        FXAA,
-                        CONTRAST_ADAPTIVE_SHARPENING,
-                        END_MAIN_PASS_POST_PROCESSING,
-                    ],
-                );
+            use core_2d::graph::*;
+            if self.core_2d_settings.get_bool(ContrastAdaptiveSharpening) {
+                render_app
+                    .add_render_graph_node::<CASNode>(CORE_2D, CONTRAST_ADAPTIVE_SHARPENING)
+                    .add_render_graph_edge(CORE_2D, TONEMAPPING, CONTRAST_ADAPTIVE_SHARPENING)
+                    .add_render_graph_edges(
+                        CORE_2D,
+                        &[
+                            FXAA,
+                            CONTRAST_ADAPTIVE_SHARPENING,
+                            END_MAIN_PASS_POST_PROCESSING,
+                        ],
+                    );
+            }
         }
     }
 
