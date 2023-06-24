@@ -181,7 +181,7 @@ macro_rules! pipeline_node {
         }
 
         impl $pipeline_node {
-            fn new() -> std::boxed::Box<Self> {
+            pub fn new() -> std::boxed::Box<Self> {
                 std::boxed::Box::new($pipeline_node {
                     node_factory: std::boxed::Box::new($crate::pipelining::NodeFactory::<$node>::default()),
                 })

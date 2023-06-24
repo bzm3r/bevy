@@ -5,7 +5,7 @@ mod upsampling_pipeline;
 pub use settings::{BloomCompositeMode, BloomPrefilterSettings, BloomSettings};
 
 use crate::{
-    core_2d::{self, CORE_2D},
+    core_2d::{self, graph::CORE_2D},
     core_3d::{self, CORE_3D},
 };
 use bevy_app::{App, Plugin};
@@ -88,16 +88,13 @@ impl Plugin for BloomPlugin {
                 ],
             )
             // Add bloom to the 2d render graph
-            .add_render_graph_node::<ViewNodeRunner<BloomNode>>(
-                CORE_2D,
-                core_2d::graph::node::BLOOM,
-            )
+            .add_render_graph_node::<ViewNodeRunner<BloomNode>>(CORE_2D, core_2d::graph::BLOOM)
             .add_render_graph_edges(
                 CORE_2D,
                 &[
-                    core_2d::graph::node::MAIN_PASS,
-                    core_2d::graph::node::BLOOM,
-                    core_2d::graph::node::TONEMAPPING,
+                    core_2d::graph::MAIN_PASS,
+                    core_2d::graph::BLOOM,
+                    core_2d::graph::TONEMAPPING,
                 ],
             );
     }

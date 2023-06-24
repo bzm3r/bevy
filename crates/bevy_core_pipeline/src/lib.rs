@@ -52,7 +52,7 @@ use bevy_app::{App, Plugin};
 use bevy_asset::load_internal_asset;
 use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 
-#[derive(Default, Copy, Clone)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct CorePipelinePlugin {
     pub core_2d: Core2dPlugin,
 }
@@ -76,7 +76,7 @@ impl Plugin for CorePipelinePlugin {
                 self.core_2d,
                 Core3dPlugin,
                 BlitPlugin,
-                MsaaWritebackPlugin,
+                MsaaWritebackPlugin::inherit_from(self.core2d),
                 TonemappingPlugin,
                 UpscalingPlugin,
                 BloomPlugin,

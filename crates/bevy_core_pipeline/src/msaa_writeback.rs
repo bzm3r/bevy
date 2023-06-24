@@ -20,16 +20,15 @@ use bevy_render::{render_resource::*, RenderApp};
 
 /// This enables "msaa writeback" support for the `core_2d` and `core_3d` pipelines, which can be enabled on cameras
 /// using [`bevy_render::camera::Camera::msaa_writeback`]. See the docs on that field for more information.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MsaaWritebackPlugin {
     pub core_2d_pipeline_settings: Core2dPipelineSettings,
-    enable_for_3d: bool,
 }
 
 impl MsaaWritebackPlugin {
     pub fn inherit_from(core_2d: &Core2dPlugin) -> Self {
         MsaaWritebackPlugin {
             core_2d_pipeline_settings: core_2d.core_pipeline_settings,
-            enable_for_3d: true,
         }
     }
 }
@@ -45,7 +44,7 @@ impl Plugin for MsaaWritebackPlugin {
             queue_msaa_writeback_pipelines.in_set(RenderSet::Queue),
         );
         {
-            use core2d::graph::*;
+            use core_2d::graph::*;
             let msaa_pipeline_sequence =
                 core_2d::graph::create_msaa_writeback_sequence(self.core_2d_pipeline_settings);
             if self.core_2d_pipeline_settings.msaa_writeback {
