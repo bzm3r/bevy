@@ -330,6 +330,7 @@ pub fn derive_world_query_impl(input: TokenStream) -> TokenStream {
                     _entity: #path::entity::Entity,
                     _table_row: #path::storage::TableRow,
                 ) -> bool {
+                    crate::prelude::info!("Doing some fancy filtering!");
                     true #(&& <#field_types>::filter_fetch(&mut _fetch.#named_field_idents, _entity, _table_row))*
                 }
 
