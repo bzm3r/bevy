@@ -319,6 +319,7 @@ pub fn derive_world_query_impl(input: TokenStream) -> TokenStream {
                     _entity: #path::entity::Entity,
                     _table_row: #path::storage::TableRow,
                 ) -> <Self as #path::query::WorldQuery>::Item<'__w> {
+                    #bevy_utils_path::tracing::info!("Doing some fetching!");
                     Self::Item {
                         #(#field_idents: <#field_types>::fetch(&mut _fetch.#named_field_idents, _entity, _table_row),)*
                     }
@@ -331,7 +332,7 @@ pub fn derive_world_query_impl(input: TokenStream) -> TokenStream {
                     _entity: #path::entity::Entity,
                     _table_row: #path::storage::TableRow,
                 ) -> bool {
-                    #bevy_utils_path::tracing::info!("Doing some fancy filtering!");
+                    #bevy_utils_path::tracing::info!("Doing some filtered fetching!");
                     true #(&& <#field_types>::filter_fetch(&mut _fetch.#named_field_idents, _entity, _table_row))*
                 }
 
