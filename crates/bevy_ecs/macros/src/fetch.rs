@@ -10,7 +10,7 @@ use syn::{
     Attribute, Data, DataStruct, DeriveInput, Field, Index, Meta,
 };
 
-use crate::bevy_ecs_path;
+use crate::{bevy_ecs_path, bevy_utils_path};
 
 #[derive(Default)]
 struct FetchStructAttributes {
@@ -84,6 +84,7 @@ pub fn derive_world_query_impl(input: TokenStream) -> TokenStream {
     }
 
     let path = bevy_ecs_path();
+    let bevy_utils_path = bevy_utils_path();
 
     let user_generics = ast.generics.clone();
     let (user_impl_generics, user_ty_generics, user_where_clauses) = user_generics.split_for_impl();
@@ -330,7 +331,7 @@ pub fn derive_world_query_impl(input: TokenStream) -> TokenStream {
                     _entity: #path::entity::Entity,
                     _table_row: #path::storage::TableRow,
                 ) -> bool {
-                    #path::prelude::info!("Doing some fancy filtering!");
+                    #bevy_utils_path::tracing::info!("Doing some fancy filtering!");
                     true #(&& <#field_types>::filter_fetch(&mut _fetch.#named_field_idents, _entity, _table_row))*
                 }
 
