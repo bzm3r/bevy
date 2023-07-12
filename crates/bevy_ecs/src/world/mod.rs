@@ -1906,7 +1906,9 @@ unsafe impl Sync for World {}
 /// This can be helpful for complex initialization or context-aware defaults.
 pub trait FromWorld {
     /// Creates `Self` using data from the given [World]
-    fn from_world(world: &mut World) -> Self;
+    fn from_world(world: &mut World) -> Self
+    where
+        Self: Sized;
 }
 
 impl<T: Default> FromWorld for T {

@@ -1,23 +1,6 @@
 mod camera_2d;
+pub mod graph;
 mod main_pass_2d_node;
-
-pub mod graph {
-    pub const NAME: &str = "core_2d";
-    pub mod input {
-        pub const VIEW_ENTITY: &str = "view_entity";
-    }
-    pub mod node {
-        pub const MSAA_WRITEBACK: &str = "msaa_writeback";
-        pub const MAIN_PASS: &str = "main_pass";
-        pub const BLOOM: &str = "bloom";
-        pub const TONEMAPPING: &str = "tonemapping";
-        pub const FXAA: &str = "fxaa";
-        pub const UPSCALING: &str = "upscaling";
-        pub const CONTRAST_ADAPTIVE_SHARPENING: &str = "contrast_adaptive_sharpening";
-        pub const END_MAIN_PASS_POST_PROCESSING: &str = "end_main_pass_post_processing";
-    }
-}
-pub const CORE_2D: &str = graph::NAME;
 
 pub use camera_2d::*;
 pub use main_pass_2d_node::*;
@@ -27,7 +10,6 @@ use bevy_ecs::prelude::*;
 use bevy_render::{
     camera::Camera,
     extract_component::ExtractComponentPlugin,
-    render_graph::{EmptyNode, RenderGraphApp, ViewNodeRunner},
     render_phase::{
         batch_phase_system, sort_phase_system, BatchedPhaseItem, CachedRenderPipelinePhaseItem,
         DrawFunctionId, DrawFunctions, PhaseItem, RenderPhase,
@@ -38,9 +20,12 @@ use bevy_render::{
 use bevy_utils::FloatOrd;
 use std::ops::Range;
 
-use crate::{tonemapping::TonemappingNode, upscaling::UpscalingNode};
+pub use self::graph::*;
 
-pub struct Core2dPlugin;
+#[derive(Clone, Debug, Default)]
+pub struct Core2dPlugin {
+    pub core_pipeline_settings: Core2dSettings,
+}
 
 impl Plugin for Core2dPlugin {
     fn build(&self, app: &mut App) {
@@ -65,22 +50,9 @@ impl Plugin for Core2dPlugin {
                 ),
             );
 
-        use graph::node::*;
-        render_app
-            .add_render_sub_graph(CORE_2D)
-            .add_render_graph_node::<MainPass2dNode>(CORE_2D, MAIN_PASS)
-            .add_render_graph_node::<ViewNodeRunner<TonemappingNode>>(CORE_2D, TONEMAPPING)
-            .add_render_graph_node::<EmptyNode>(CORE_2D, END_MAIN_PASS_POST_PROCESSING)
-            .add_render_graph_node::<ViewNodeRunner<UpscalingNode>>(CORE_2D, UPSCALING)
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    MAIN_PASS,
-                    TONEMAPPING,
-                    END_MAIN_PASS_POST_PROCESSING,
-                    UPSCALING,
-                ],
-            );
+        use graph::*;
+        let core_sequence = create_core_sequence(self.core_pipeline_settings);
+        core_sequence.create_new_sub_graph(render_app, CORE_2D);
     }
 }
 

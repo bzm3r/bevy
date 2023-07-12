@@ -1,6 +1,6 @@
 use crate::{
     blit::{BlitPipeline, BlitPipelineKey},
-    core_2d::{self, CORE_2D},
+    core_2d::{self, Core2dPlugin, Core2dSettings, CORE_2D, MAIN_PASS},
     core_3d::{self, CORE_3D},
 };
 use bevy_app::{App, Plugin};
@@ -14,9 +14,24 @@ use bevy_render::{
 };
 use bevy_render::{render_resource::*, RenderApp};
 
-/// This enables "msaa writeback" support for the `core_2d` and `core_3d` pipelines, which can be enabled on cameras
-/// using [`bevy_render::camera::Camera::msaa_writeback`]. See the docs on that field for more information.
-pub struct MsaaWritebackPlugin;
+// /// This enables "msaa writeback" support for the `core_2d` and `core_3d` pipelines, which can be enabled on cameras
+// /// using [`bevy_render::camera::Camera::msaa_writeback`]. See the docs on that field for more information.
+#[derive(Clone, Debug, Default)]
+pub struct MsaaWritebackPlugin {
+    pub graph_gen: MsaaWritebackSettings,
+}
+
+pub struct HelloWorld {
+    pub field: Core2dKittyCat,
+}
+
+impl MsaaWritebackPlugin {
+    pub fn required(core_2d: &Core2dPlugin) -> Self {
+        MsaaWritebackPlugin {
+            graph_gen: core_2d.core_pipeline_settings,
+        }
+    }
+}
 
 impl Plugin for MsaaWritebackPlugin {
     fn build(&self, app: &mut App) {
@@ -29,10 +44,17 @@ impl Plugin for MsaaWritebackPlugin {
             queue_msaa_writeback_pipelines.in_set(RenderSet::Queue),
         );
         {
-            use core_2d::graph::node::*;
-            render_app
-                .add_render_graph_node::<MsaaWritebackNode>(CORE_2D, MSAA_WRITEBACK)
-                .add_render_graph_edge(CORE_2D, MSAA_WRITEBACK, MAIN_PASS);
+            use core_2d::graph::*;
+            let msaa_pipeline_sequence =
+                core_2d::graph::create_msaa_writeback_sequence(self.core_2d_pipeline_settings);
+            if self.core_2d_pipeline_settings.msaa_writeback {
+                msaa_pipeline_sequence.insert_into_sub_graph(
+                    render_app,
+                    CORE_2D,
+                    None,
+                    Some(MAIN_PASS),
+                );
+            }
         }
         {
             use core_3d::graph::node::*;

@@ -11,7 +11,11 @@ use bevy_ecs::{
     world::{FromWorld, World},
 };
 use downcast_rs::{impl_downcast, Downcast};
-use std::{borrow::Cow, fmt::Debug};
+use std::{
+    borrow::Cow,
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 use thiserror::Error;
 
 define_atomic_id!(NodeId);
@@ -53,9 +57,79 @@ pub trait Node: Downcast + Send + Sync + 'static {
         render_context: &mut RenderContext,
         world: &World,
     ) -> Result<(), NodeRunError>;
+
+    /// Get the name of this trait's implementor.
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
+
+    /// Convert this node type into a `Box<dyn Node>`. This is ultimately how node implementors are stored in a
+    /// [`NodeState`] struct.
+    fn into_box(self) -> Box<dyn Node>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+    }
 }
 
 impl_downcast!(Node);
+
+impl Node for Box<dyn Node> {
+    fn input(&self) -> Vec<SlotInfo> {
+        self.deref().input()
+    }
+
+    fn output(&self) -> Vec<SlotInfo> {
+        self.deref().output()
+    }
+
+    fn update(&mut self, _world: &mut World) {
+        self.deref_mut().update(_world)
+    }
+
+    fn run(
+        &self,
+        graph: &mut RenderGraphContext,
+        render_context: &mut RenderContext,
+        world: &World,
+    ) -> Result<(), NodeRunError> {
+        self.deref().run(graph, render_context, world)
+    }
+
+    fn type_name(&self) -> &'static str {
+        self.deref().type_name()
+    }
+
+    fn into_box(self) -> Box<dyn Node>
+    where
+        Self: Sized,
+    {
+        self
+    }
+}
+
+// /// A newtype struct facilitating conversions between `Node` and `Box<dyn Node>`.
+// pub struct DynamicNode(Box<dyn Node>);
+
+// impl<T: Node + 'static> Into<T> for Box<dyn Node> {
+//     fn into(node: Box<dyn Node>) -> T {
+//         Box::new(node)
+//     }
+// }
+
+// impl From<Box<dyn Node>> for DynamicNode {
+//     fn from(box_dyn_node: Box<dyn Node>) -> Self {
+//         DynamicNode(box_dyn_node)
+//     }
+// }
+
+// impl From<DynamicNode> for Box<dyn Node> {
+//     fn from(dynamic_node: DynamicNode) -> Self {
+//         let DynamicNode(inner) = dynamic_node;
+//         inner
+//     }
+// }
 
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum NodeRunError {
@@ -203,17 +277,16 @@ impl Debug for NodeState {
 impl NodeState {
     /// Creates an [`NodeState`] without edges, but the `input_slots` and `output_slots`
     /// are provided by the `node`.
-    pub fn new<T>(id: NodeId, node: T) -> Self
-    where
-        T: Node,
-    {
+    pub fn new(id: NodeId, node: impl Node) -> Self {
+        let type_name = node.type_name();
+
         NodeState {
             id,
             name: None,
             input_slots: node.input().into(),
             output_slots: node.output().into(),
-            node: Box::new(node),
-            type_name: std::any::type_name::<T>(),
+            node: node.into_box(),
+            type_name,
             edges: Edges {
                 id,
                 input_edges: Vec::new(),
@@ -290,6 +363,12 @@ impl From<&'static str> for NodeLabel {
 impl From<NodeId> for NodeLabel {
     fn from(value: NodeId) -> Self {
         NodeLabel::Id(value)
+    }
+}
+
+impl From<Cow<'static, str>> for NodeLabel {
+    fn from(value: Cow<'static, str>) -> Self {
+        NodeLabel::Name(value)
     }
 }
 

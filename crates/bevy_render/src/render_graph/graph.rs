@@ -75,7 +75,7 @@ impl RenderGraph {
     pub fn set_input(&mut self, inputs: Vec<SlotInfo>) -> NodeId {
         assert!(self.input_node.is_none(), "Graph already has an input node");
 
-        let id = self.add_node("GraphInputNode", GraphInputNode { inputs });
+        let id = self.add_node("GraphInputNode", GraphInputNode { inputs }.into_box());
         self.input_node = Some(id);
         id
     }
@@ -106,27 +106,53 @@ impl RenderGraph {
 
     /// Adds the `node` with the `name` to the graph.
     /// If the name is already present replaces it instead.
-    pub fn add_node<T>(&mut self, name: impl Into<Cow<'static, str>>, node: T) -> NodeId
-    where
-        T: Node,
-    {
+    pub fn add_node(&mut self, name: impl Into<Cow<'static, str>>, node: impl Node) -> NodeId {
         let id = NodeId::new();
         let name = name.into();
-        let mut node_state = NodeState::new(id, node);
+        let mut node_state = NodeState::new(id, node.into_box());
         node_state.name = Some(name.clone());
         self.nodes.insert(id, node_state);
         self.node_names.insert(name, id);
         id
     }
 
-    /// Add `node_edge`s based on the order of the given `edges` array.
+    /// Add `node_edges based on the order of the given slice of string literal node labels.
     ///
-    /// Defining an edge that already exists is not considered an error with this api.
-    /// It simply won't create a new edge.
+    /// This calls [`add_edges_between`](Self::add_edges_between), and exists
+    /// as an adaptor to obviate the need for changes in existing user code.
     pub fn add_node_edges(&mut self, edges: &[&'static str]) {
-        for window in edges.windows(2) {
-            let [a, b] = window else { break; };
-            if let Err(err) = self.try_add_node_edge(*a, *b) {
+        self.add_edges_between(edges.iter().map(|&x| x.into()).collect());
+        // for window in edges.windows(2) {
+        //     let [a, b] = window else { break; };
+        //     if let Err(err) = self.try_add_node_edge(*a, *b) {
+        //         match err {
+        //             // Already existing edges are very easy to produce with this api
+        //             // and shouldn't cause a panic
+        //             RenderGraphError::EdgeAlreadyExists(_) => {}
+        //             _ => panic!("{err:?}"),
+        //         }
+        //     }
+        // }
+    }
+
+    /// Add `node_edges based on the order of the given vector of [`NodeLabel`]s.
+    ///
+    /// For example, if we are given the labels: `[a, b, c]`, then the edges `a-b`
+    /// and `b-c` will be created.
+    ///
+    /// If an edge is a duplicate of an existing edge, then the edge is not recreated.
+    ///
+    /// Panics if: the call to [`try_add_edge`](Self::try_add_edge) returns a
+    /// [`RenderGraphError`].
+    pub fn add_edges_between(&mut self, node_sequence: Vec<NodeLabel>) {
+        if node_sequence.is_empty() {
+            return;
+        }
+
+        let input_nodes = node_sequence[1..].to_vec();
+
+        for (output, input) in node_sequence.into_iter().zip(input_nodes.into_iter()) {
+            if let Err(err) = self.try_add_edge(output, input) {
                 match err {
                     // Already existing edges are very easy to produce with this api
                     // and shouldn't cause a panic
@@ -366,7 +392,7 @@ impl RenderGraph {
     /// # See also
     ///
     /// - [`add_node_edge`](Self::add_node_edge) for an infallible version.
-    pub fn try_add_node_edge(
+    pub fn try_add_edge(
         &mut self,
         output_node: impl Into<NodeLabel>,
         input_node: impl Into<NodeLabel>,
@@ -406,7 +432,7 @@ impl RenderGraph {
         output_node: impl Into<NodeLabel>,
         input_node: impl Into<NodeLabel>,
     ) {
-        self.try_add_node_edge(output_node, input_node).unwrap();
+        self.try_add_edge(output_node, input_node).unwrap();
     }
 
     /// Removes the [`Edge::NodeEdge`] from the graph. If either node does not exist then nothing
@@ -743,10 +769,10 @@ mod tests {
     #[test]
     fn test_graph_edges() {
         let mut graph = RenderGraph::default();
-        let a_id = graph.add_node("A", TestNode::new(0, 1));
-        let b_id = graph.add_node("B", TestNode::new(0, 1));
-        let c_id = graph.add_node("C", TestNode::new(1, 1));
-        let d_id = graph.add_node("D", TestNode::new(1, 0));
+        let a_id = graph.add_node("A", TestNode::new(0, 1).into_box());
+        let b_id = graph.add_node("B", TestNode::new(0, 1).into_box());
+        let c_id = graph.add_node("C", TestNode::new(1, 1).into_box());
+        let d_id = graph.add_node("D", TestNode::new(1, 0).into_box());
 
         graph.add_slot_edge("A", "out_0", "C", "in_0");
         graph.add_node_edge("B", "C");
@@ -816,9 +842,9 @@ mod tests {
     fn test_slot_already_occupied() {
         let mut graph = RenderGraph::default();
 
-        graph.add_node("A", TestNode::new(0, 1));
-        graph.add_node("B", TestNode::new(0, 1));
-        graph.add_node("C", TestNode::new(1, 1));
+        graph.add_node("A", TestNode::new(0, 1).into_box());
+        graph.add_node("B", TestNode::new(0, 1).into_box());
+        graph.add_node("C", TestNode::new(1, 1).into_box());
 
         graph.add_slot_edge("A", 0, "C", 0);
         assert_eq!(
@@ -836,8 +862,8 @@ mod tests {
     fn test_edge_already_exists() {
         let mut graph = RenderGraph::default();
 
-        graph.add_node("A", TestNode::new(0, 1));
-        graph.add_node("B", TestNode::new(1, 0));
+        graph.add_node("A", TestNode::new(0, 1).into_box());
+        graph.add_node("B", TestNode::new(1, 0).into_box());
 
         graph.add_slot_edge("A", 0, "B", 0);
         assert_eq!(
@@ -872,9 +898,9 @@ mod tests {
         }
 
         let mut graph = RenderGraph::default();
-        let a_id = graph.add_node("A", SimpleNode);
-        let b_id = graph.add_node("B", SimpleNode);
-        let c_id = graph.add_node("C", SimpleNode);
+        let a_id = graph.add_node("A", SimpleNode.into_box());
+        let b_id = graph.add_node("B", SimpleNode.into_box());
+        let c_id = graph.add_node("C", SimpleNode.into_box());
 
         graph.add_node_edges(&["A", "B", "C"]);
 

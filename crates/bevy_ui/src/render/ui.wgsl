@@ -2,6 +2,8 @@
 
 const TEXTURED_QUAD: u32 = 0u;
 
+const TEXTURED_QUAD: u32 = 0u;
+
 @group(0) @binding(0)
 var<uniform> view: View;
 
