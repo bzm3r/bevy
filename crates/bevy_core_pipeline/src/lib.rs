@@ -8,6 +8,7 @@ pub mod core_2d;
 pub mod core_3d;
 pub mod fullscreen_vertex_shader;
 pub mod fxaa;
+pub mod graph_gen;
 pub mod msaa_writeback;
 pub mod pipelining;
 pub mod prepass;
@@ -16,6 +17,7 @@ mod taa;
 pub mod tonemapping;
 pub mod upscaling;
 
+use graph_gen::generator::GraphGenerator;
 pub use skybox::Skybox;
 
 /// Experimental features that are not yet finished. Please report any issues you encounter!
@@ -52,7 +54,7 @@ use bevy_app::{App, Plugin};
 use bevy_asset::load_internal_asset;
 use bevy_render::{extract_resource::ExtractResourcePlugin, prelude::Shader};
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct CorePipelinePlugin {
     pub core_2d: Core2dPlugin,
 }
@@ -84,4 +86,11 @@ impl Plugin for CorePipelinePlugin {
                 CASPlugin,
             ));
     }
+}
+
+/// Trait for [`Plugin`] implementor that will create and insert a sub-graph into the main render app's
+/// graph.  
+pub trait RenderGraphPlugin {
+    type G: GraphGenerator;
+    fn graph_gen(&self) -> Self::G;
 }

@@ -4,10 +4,7 @@ mod upsampling_pipeline;
 
 pub use settings::{BloomCompositeMode, BloomPrefilterSettings, BloomSettings};
 
-use crate::{
-    core_2d::{self, graph::CORE_2D},
-    core_3d::{self, CORE_3D},
-};
+use crate::core_3d::{self, CORE_3D};
 use bevy_app::{App, Plugin};
 use bevy_asset::{load_internal_asset, HandleUntyped};
 use bevy_ecs::{prelude::*, query::QueryItem};
@@ -43,7 +40,9 @@ const BLOOM_TEXTURE_FORMAT: TextureFormat = TextureFormat::Rg11b10Float;
 // 512 behaves well with the UV offset of 0.004 used in bloom.wgsl
 const MAX_MIP_DIMENSION: u32 = 512;
 
-pub struct BloomPlugin;
+pub struct BloomPlugin {
+    
+}
 
 impl Plugin for BloomPlugin {
     fn build(&self, app: &mut App) {
@@ -73,7 +72,9 @@ impl Plugin for BloomPlugin {
                     prepare_upsampling_pipeline.in_set(RenderSet::Prepare),
                     queue_bloom_bind_groups.in_set(RenderSet::Queue),
                 ),
-            )
+            );
+
+        render_app
             // Add bloom to the 3d render graph
             .add_render_graph_node::<ViewNodeRunner<BloomNode>>(
                 CORE_3D,
@@ -85,16 +86,6 @@ impl Plugin for BloomPlugin {
                     core_3d::graph::node::END_MAIN_PASS,
                     core_3d::graph::node::BLOOM,
                     core_3d::graph::node::TONEMAPPING,
-                ],
-            )
-            // Add bloom to the 2d render graph
-            .add_render_graph_node::<ViewNodeRunner<BloomNode>>(CORE_2D, core_2d::graph::BLOOM)
-            .add_render_graph_edges(
-                CORE_2D,
-                &[
-                    core_2d::graph::MAIN_PASS,
-                    core_2d::graph::BLOOM,
-                    core_2d::graph::TONEMAPPING,
                 ],
             );
     }

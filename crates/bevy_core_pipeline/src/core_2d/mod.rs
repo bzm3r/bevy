@@ -20,11 +20,11 @@ use bevy_render::{
 use bevy_utils::FloatOrd;
 use std::ops::Range;
 
-use self::graph::{Core2dPipelineSettings, CORE_2D};
+pub use self::graph::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct Core2dPlugin {
-    pub core_pipeline_settings: Core2dPipelineSettings,
+    pub core_pipeline_settings: Core2dSettings,
 }
 
 impl Plugin for Core2dPlugin {

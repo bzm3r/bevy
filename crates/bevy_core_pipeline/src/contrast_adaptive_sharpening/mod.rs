@@ -1,7 +1,7 @@
 use crate::{
     core_2d::{
         self,
-        graph::{Core2dPipelineSettings, CORE_2D, PipelineSettings},
+        graph::{Core2dSettings, PipelineSettings, CORE_2D},
     },
     core_3d::{self, CORE_3D},
     fullscreen_vertex_shader::fullscreen_shader_vertex_state,
@@ -100,7 +100,7 @@ const CONTRAST_ADAPTIVE_SHARPENING_SHADER_HANDLE: HandleUntyped =
 
 /// Adds Support for Contrast Adaptive Sharpening (CAS).
 pub struct CASPlugin {
-    core_2d_settings: Core2dPipelineSettings,
+    core_2d_settings: Core2dSettings,
 }
 
 impl Plugin for CASPlugin {

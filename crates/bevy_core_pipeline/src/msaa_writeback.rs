@@ -1,10 +1,6 @@
 use crate::{
     blit::{BlitPipeline, BlitPipelineKey},
-    core_2d::{
-        self,
-        graph::{Core2dPipelineSettings, MAIN_PASS},
-        Core2dPlugin, CORE_2D,
-    },
+    core_2d::{self, Core2dPlugin, Core2dSettings, CORE_2D, MAIN_PASS},
     core_3d::{self, CORE_3D},
 };
 use bevy_app::{App, Plugin};
@@ -18,17 +14,21 @@ use bevy_render::{
 };
 use bevy_render::{render_resource::*, RenderApp};
 
-/// This enables "msaa writeback" support for the `core_2d` and `core_3d` pipelines, which can be enabled on cameras
-/// using [`bevy_render::camera::Camera::msaa_writeback`]. See the docs on that field for more information.
-#[derive(Clone, Copy, Debug, Default)]
+// /// This enables "msaa writeback" support for the `core_2d` and `core_3d` pipelines, which can be enabled on cameras
+// /// using [`bevy_render::camera::Camera::msaa_writeback`]. See the docs on that field for more information.
+#[derive(Clone, Debug, Default)]
 pub struct MsaaWritebackPlugin {
-    pub core_2d_pipeline_settings: Core2dPipelineSettings,
+    pub graph_gen: MsaaWritebackSettings,
+}
+
+pub struct HelloWorld {
+    pub field: Core2dKittyCat,
 }
 
 impl MsaaWritebackPlugin {
-    pub fn inherit_from(core_2d: &Core2dPlugin) -> Self {
+    pub fn required(core_2d: &Core2dPlugin) -> Self {
         MsaaWritebackPlugin {
-            core_2d_pipeline_settings: core_2d.core_pipeline_settings,
+            graph_gen: core_2d.core_pipeline_settings,
         }
     }
 }

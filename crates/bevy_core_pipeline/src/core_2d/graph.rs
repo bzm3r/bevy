@@ -54,11 +54,11 @@ pub mod optional {
     pipeline_node!(MsaaWriteback, MsaaWritebackNode);
 }
 
-use optional::*;
-use required::*;
+pub use optional::*;
+pub use required::*;
 
 #[derive(Clone, Debug)]
-pub struct Core2dPipelineSettings(HashMap<&'static str, bool>);
+pub struct Core2dSettings(HashMap<&'static str, bool>);
 
 pub trait PipelineSettings {
     /// Get a reference to the inner hashmap.
@@ -71,7 +71,7 @@ pub trait PipelineSettings {
     fn set_bool(&mut self, label: &'static str, value: bool);
 }
 
-impl PipelineSettings for Core2dPipelineSettings {
+impl PipelineSettings for Core2dSettings {
     fn get_map(&self) -> &HashMap<&'static str, bool> {
         &self.0
     }
@@ -89,9 +89,9 @@ impl PipelineSettings for Core2dPipelineSettings {
     }
 }
 
-impl Default for Core2dPipelineSettings {
+impl Default for Core2dSettings {
     fn default() -> Self {
-        Core2dPipelineSettings(HashMap::from([
+        Core2dSettings(HashMap::from([
             (TONEMAPPING, true),
             (BLOOM, true),
             (MSAA_WRITEBACK, true),
@@ -137,7 +137,7 @@ macro_rules! test_sequence_inclusion {
     }
 }
 
-impl Core2dPipelineSettings {
+impl Core2dSettings {
     test_sequence_inclusion!(core, tonemapping, bloom);
 
     test_sequence_inclusion!(msaa_writeback, msaa_writeback);
@@ -179,7 +179,7 @@ create_simple_sequencer!(
     Fxaa,
     EndMainPassPostProcessing,
     Upscaling;
-    Core2dPipelineSettings
+    Core2dSettings
 );
 
 create_simple_sequencer!("MSAA writeback", msaa_writeback; MsaaWriteback);
